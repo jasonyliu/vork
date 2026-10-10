@@ -2,7 +2,7 @@
 
 ## Current
 
-Execution opened 2026-10-10 with this plan. Batch 1 (`docs/policy/`) is in progress on `feature/milestone_v2026.10.10_conduction-framework/batch-01-policy`.
+Batch 1 (`docs/policy/`) passed review 2026-10-10 and is on its lane awaiting merge. Next: batch 2, `docs/conventions/`.
 
 ## Plan
 
@@ -10,7 +10,7 @@ Each batch is one lane and one pull request into `dev`. A batch lands on the lan
 
 | # | Step | Deliverable | Status | Pointers |
 |---|---|---|---|---|
-| 1 | Batch 1 — `docs/policy/` (6 files) | D1, D2 | in progress | `…/batch-01-policy` |
+| 1 | Batch 1 — `docs/policy/` (6 files) | D1, D2 | done | `…/batch-01-policy`, PR #2 |
 | 2 | Batch 2 — `docs/conventions/` (11) | D1, D2 | pending | |
 | 3 | Batch 3 — `provisions/` (14) | D1, D2 | pending | |
 | 4 | Batch 4 — `specs/data/` + root specs (5) | D1, D2 | pending | |
