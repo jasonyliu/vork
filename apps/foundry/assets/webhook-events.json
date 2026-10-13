@@ -1,0 +1,11 @@
+{
+  "comment": "The canonical wakery webhook subscription set. spec_wakery-github-adapter.md is authoritative; this committed list is a copy of it and drift between them is a Foundry bug (spec_foundry-data.md §GitHub artifacts).",
+  "events": [
+    "issue_comment",
+    "issue_dependencies",
+    "issues",
+    "pull_request",
+    "sub_issues",
+    "workflow_run"
+  ]
+}
