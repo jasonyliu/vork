@@ -87,7 +87,7 @@ Measured over the original instance's run: 86.8% of tokens and 79.9% of wall-clo
 
 The framework was built from February to August 2026 under another name, as an attempt to rebuild an engineering team out of agents. It was retired when its cost became clear and the open-ended work moved back to one person and one agent in one session. What survived, the project shape, the lifecycle, the records and the founding tool, is the kit that release 2 publishes.
 
-This repository starts at the extraction. The commit history, the milestone and research records, the incident trail and the tracker it references belong to the original project and are not published; where a spec or a comment cites one of them, the pointer stays as it was written. The former name is replaced by Vork throughout; the four agent personas, `main`, `heimdall`, `sarge` and `visor`, are kept. Placeholders in angle brackets stand where an operator's own value goes; the release note for an AI agent in `docs/releases/` lists every one of them.
+This repository starts at the extraction. The commit history, the milestone and research records, the incident trail and the tracker it references belong to the original project and are not published; where a spec or a comment cites one of them, the pointer stays as it was written. The former name is replaced by Vork throughout; the four agent personas, `main`, `heimdall`, `sarge` and `visor`, are kept. Placeholders in angle brackets stand where an operator's own value goes; the release note for an AI agent, `docs/releases/release_v2026.10.13/agent-notes.md`, lists every one of them.
 
 Releases are tagged `v<YYYY.MM.DD>`. Release 1 stays at its tag; later releases replace the framework with the kit.
 
