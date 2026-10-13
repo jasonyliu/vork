@@ -1,0 +1,32 @@
+{
+  "default": [
+    "docs/policy/FRAMEWORK.md"
+  ],
+  "excludeAgentIds": [],
+  "agents": {
+    "main": [
+      "docs/policy/FRAMEWORK.md",
+      "docs/policy/PROJECT.md",
+      "docs/policy/TASK.md",
+      "docs/policy/SECURITY.md",
+      "docs/policy/DELIVERY.md"
+    ],
+    "heimdall": [
+      "docs/policy/FRAMEWORK.md",
+      "docs/policy/TASK.md",
+      "docs/policy/SECURITY.md"
+    ],
+    "visor": [
+      "docs/policy/FRAMEWORK.md",
+      "docs/policy/PROJECT.md",
+      "docs/policy/TASK.md",
+      "docs/policy/SECURITY.md"
+    ],
+    "sarge": [
+      "docs/policy/FRAMEWORK.md",
+      "docs/policy/PROJECT.md",
+      "docs/policy/TASK.md",
+      "docs/policy/DELIVERY.md"
+    ]
+  }
+}

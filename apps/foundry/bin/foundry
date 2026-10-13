@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Foundry CLI entrypoint. No build step — runs the TypeScript source via the
+# locally-installed tsx (mirrors Resolver). The stable operator path is
+# ~/.local/bin/foundry, a symlink to this file in the active deployment worktree.
+set -euo pipefail
+# Resolve symlinks so invocation through the stable ~/.local/bin/foundry
+# symlink locates this app's node_modules + src, not the symlink's directory.
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+  TARGET="$(readlink "$SOURCE")"
+  case "$TARGET" in
+    /*) SOURCE="$TARGET" ;;
+    *)  SOURCE="$(cd "$(dirname "$SOURCE")" && pwd)/$TARGET" ;;
+  esac
+done
+DIR="$(cd "$(dirname "$SOURCE")/.." && pwd)"
+exec "$DIR/node_modules/.bin/tsx" "$DIR/src/main.ts" "$@"
