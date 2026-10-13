@@ -2,7 +2,7 @@
 
 ## Current
 
-Batches 1 to 3 are merged; batch 4 is on its lane. Next: batch 5, `specs/apps/resolver/`.
+Batches 1 to 4 are merged; batch 5 is on its lane. Next: batch 6, `specs/apps/foundry/`.
 
 ## Plan
 
@@ -14,7 +14,7 @@ Each batch is one lane and one pull request into `dev`. A batch is reviewed firs
 | 2 | Batch 2 — `docs/conventions/` (11); the framework's nine templates replace the scaffold's | D1, D2 | done | `…/batch-02-conventions`, PR #3 |
 | 3 | Batch 3 — `provisions/` (13); the original instance's cutover runbook not carried | D1, D2 | done | `…/batch-03-provisions`, PR #4 |
 | 4 | Batch 4 — `specs/data/` + root specs (5) | D1, D2 | done | `…/batch-04-specs-data`, PR #5 |
-| 5 | Batch 5 — `specs/apps/resolver/` (6) | D1, D2 | pending | |
+| 5 | Batch 5 — `specs/apps/resolver/` (6) | D1, D2 | done | `…/batch-05-specs-resolver`, PR #6 |
 | 6 | Batch 6 — `specs/apps/foundry/` (4) | D1, D2 | pending | |
 | 7 | Batch 7 — `specs/apps/wakery/` (26) | D1, D2 | pending | |
 | 8 | Batch 8 — `apps/data/` (24) | D1, D2 | pending | |
