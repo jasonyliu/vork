@@ -1,0 +1,33 @@
+{
+  "comment": "The full label inventory foundry seeds on every bootstrap — docs/conventions/constants.md names plus risk: codes, colors pinned per spec_foundry-data.md §GitHub artifacts. New labels enter constants.md first, then get a color row here.",
+  "labels": [
+    { "name": "type:project_inception", "color": "0e8a16" },
+    { "name": "type:project_release", "color": "0e8a16" },
+    { "name": "type:project_draft", "color": "fbca04" },
+    { "name": "type:project_decomposition", "color": "1d76db" },
+    { "name": "type:project_integration", "color": "1d76db" },
+    { "name": "type:project_review", "color": "b60205" },
+    { "name": "type:project_deployment", "color": "006b75" },
+    { "name": "type:project_operation", "color": "006b75" },
+    { "name": "type:dbops", "color": "006b75" },
+    { "name": "type:project_hotfix", "color": "d93f0b" },
+    { "name": "type:spec", "color": "5319e7" },
+    { "name": "type:research", "color": "5319e7" },
+    { "name": "type:deliberation", "color": "5319e7" },
+    { "name": "type:coding", "color": "5319e7" },
+    { "name": "type:bug", "color": "d73a4a" },
+    { "name": "type:enhancement", "color": "a2eeef" },
+    { "name": "type:defect", "color": "e99695" },
+    { "name": "task:parent", "color": "0e8a16" },
+    { "name": "task:child", "color": "bfd4f2" },
+    { "name": "task:blocked", "color": "fef2c0" },
+    { "name": "task:blocking", "color": "e99695" },
+    { "name": "agent:assignee", "color": "c5def5" },
+    { "name": "agent:owner", "color": "c5def5" },
+    { "name": "agent:auditor", "color": "c5def5" },
+    { "name": "risk:R100", "color": "0e8a16" },
+    { "name": "risk:R200", "color": "fbca04" },
+    { "name": "risk:R300", "color": "d93f0b" },
+    { "name": "risk:R999", "color": "b60205" }
+  ]
+}
