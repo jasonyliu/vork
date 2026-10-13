@@ -2,7 +2,7 @@
 
 ## Current
 
-Batches 1 and 2 are merged or on their lane; batches 3 and 4 are reviewed in staging and await the Principal's verdict. Next: batch 5, `specs/apps/resolver/`.
+Batches 1 and 2 are merged; batch 3 is on its lane; batch 4 awaits the Principal's verdict. Next: batch 5, `specs/apps/resolver/`.
 
 ## Plan
 
@@ -12,7 +12,7 @@ Each batch is one lane and one pull request into `dev`. A batch is reviewed firs
 |---|---|---|---|---|
 | 1 | Batch 1 — `docs/policy/` (6 files) | D1, D2 | done | `…/batch-01-policy`, PR #2 |
 | 2 | Batch 2 — `docs/conventions/` (11); the framework's nine templates replace the scaffold's | D1, D2 | done | `…/batch-02-conventions`, PR #3 |
-| 3 | Batch 3 — `provisions/` (14) | D1, D2 | pending | |
+| 3 | Batch 3 — `provisions/` (13); the original instance's cutover runbook not carried | D1, D2 | done | `…/batch-03-provisions`, PR #4 |
 | 4 | Batch 4 — `specs/data/` + root specs (5) | D1, D2 | pending | |
 | 5 | Batch 5 — `specs/apps/resolver/` (6) | D1, D2 | pending | |
 | 6 | Batch 6 — `specs/apps/foundry/` (4) | D1, D2 | pending | |
@@ -29,3 +29,4 @@ Each batch is one lane and one pull request into `dev`. A batch is reviewed firs
 
 - 2026-10-10 — Plan laid down: eleven review batches shallow to deep, then the authored material, then the agent release note, then the release.
 - 2026-10-13 — Review moved to the editing tree: a batch is read and judged there, then copied verbatim onto its lane. Batch 2 lands with the framework's own record templates in place of the scaffold's; the current set returns with the next milestone.
+- 2026-10-13 — Batch 3 lands without the original instance's database cutover runbook: a dated record of one migration, not a procedure; the mechanism ships in the database spec and the cutover CLI.
