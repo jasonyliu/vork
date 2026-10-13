@@ -2,7 +2,7 @@
 
 ## Current
 
-Batches 1 to 7 are merged; batch 8 is on its lane. Next: batch 9, `apps/resolver/`.
+Batches 1 to 8 are merged; batch 9 is on its lane. Next: batch 10, `apps/foundry/`.
 
 ## Plan
 
@@ -18,7 +18,7 @@ Each batch is one lane and one pull request into `dev`. A batch is reviewed firs
 | 6 | Batch 6 — `specs/apps/foundry/` (4) | D1, D2 | done | `…/batch-06-specs-foundry`, PR #7 |
 | 7 | Batch 7 — `specs/apps/wakery/` (26) | D1, D2 | done | `…/batch-07-specs-wakery`, PR #8 |
 | 8 | Batch 8 — `apps/data/` (24); seeded registry rows become operator inputs | D1, D2 | done | `…/batch-08-apps-data`, PR #9 |
-| 9 | Batch 9 — `apps/resolver/` (24) | D1, D2 | pending | |
+| 9 | Batch 9 — `apps/resolver/` (24) | D1, D2 | done | `…/batch-09-apps-resolver`, PR #10 |
 | 10 | Batch 10 — `apps/foundry/` (65); placeholder defaults become required inputs | D1, D2 | pending | |
 | 11 | Batch 11 — `apps/wakery/` (116); generic plist and installer in place of the originals | D1, D2, D3 | pending | |
 | 12 | Authored material — README, LICENSE, contribution stance | D3 | pending | |
