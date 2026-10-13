@@ -2,7 +2,7 @@
 
 ## Current
 
-Batches 1 to 6 are merged; batch 7 is on its lane. Next: batch 8, `apps/data/` — the first code batch.
+Batches 1 to 7 are merged; batch 8 is on its lane. Next: batch 9, `apps/resolver/`.
 
 ## Plan
 
@@ -17,7 +17,7 @@ Each batch is one lane and one pull request into `dev`. A batch is reviewed firs
 | 5 | Batch 5 — `specs/apps/resolver/` (6) | D1, D2 | done | `…/batch-05-specs-resolver`, PR #6 |
 | 6 | Batch 6 — `specs/apps/foundry/` (4) | D1, D2 | done | `…/batch-06-specs-foundry`, PR #7 |
 | 7 | Batch 7 — `specs/apps/wakery/` (26) | D1, D2 | done | `…/batch-07-specs-wakery`, PR #8 |
-| 8 | Batch 8 — `apps/data/` (24) | D1, D2 | pending | |
+| 8 | Batch 8 — `apps/data/` (24); seeded registry rows become operator inputs | D1, D2 | done | `…/batch-08-apps-data`, PR #9 |
 | 9 | Batch 9 — `apps/resolver/` (24) | D1, D2 | pending | |
 | 10 | Batch 10 — `apps/foundry/` (65); placeholder defaults become required inputs | D1, D2 | pending | |
 | 11 | Batch 11 — `apps/wakery/` (116); generic plist and installer in place of the originals | D1, D2, D3 | pending | |
@@ -32,3 +32,4 @@ Each batch is one lane and one pull request into `dev`. A batch is reviewed firs
 - 2026-10-13 — Batch 3 lands without the original instance's database cutover runbook: a dated record of one migration, not a procedure; the mechanism ships in the database spec and the cutover CLI.
 - 2026-10-13 — Batch 4: the specs keep their citations of the original project's tracker and records; the release note will say once that those do not resolve here.
 - 2026-10-13 — Batch 7 keeps the Principal's original review note on the first Wakery draft as technical history. Hardware is estate detail: no file describes the machines the framework ran on.
+- 2026-10-13 — Batch 8 sets the code stance in practice: a value the original instance seeded (its accounts, its repo mapping, its retired board) is an empty array marked as environment input, never a placeholder; the suite is kept green on the generalised seed.
