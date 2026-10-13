@@ -28,12 +28,13 @@ Publish how one engineer builds software with AI: the kit in daily use, and the 
 
 | Product | Description | Source |
 |---|---|---|
+| Conduction framework, release 1 | The retired multi-agent framework as a reading release: policy, conventions, specs, the four services, provisions | tag `v2026.10.13`; `docs/releases/release_v2026.10.13/` |
 
 ## Milestones
 
 | Key | Description | Status | Date | Release | Path |
 |---|---|---|---|---|---|
-| `milestone_v2026.10.10_conduction-framework` | Conduction framework — the first release: the retired multi-agent framework published whole at its own tag, reviewed file by file, renamed to Vork, with a release note written for an AI agent | Active | started 2026-10-10 | — | `docs/milestones/milestone_v2026.10.10_conduction-framework/` |
+| `milestone_v2026.10.10_conduction-framework` | Conduction framework — the first release: the retired multi-agent framework published whole, reviewed file by file in eleven batches, renamed to Vork, with the README's three lists and a release note written for an AI agent | Completed | 2026-10-10 → 2026-10-13 | `v2026.10.13` | `docs/milestones/milestone_v2026.10.10_conduction-framework/` |
 
 ## Provision
 

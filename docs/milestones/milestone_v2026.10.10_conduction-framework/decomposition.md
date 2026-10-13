@@ -2,7 +2,7 @@
 
 ## Current
 
-Batches 1 to 11 are merged. Step 12, the authored material, is on its lane (PR #13). Next: step 13, the release note for an AI agent, then release.
+Closed. Batches 1 to 11, the authored material and the agent release note are merged; the milestone released as `v2026.10.13`. The next milestone brings the kit.
 
 ## Plan
 
@@ -22,8 +22,8 @@ Each batch is one lane and one pull request into `dev`. A batch is reviewed firs
 | 10 | Batch 10 — `apps/foundry/` (65); placeholder defaults become required inputs | D1, D2 | done | `…/batch-10-apps-foundry`, PR #11 |
 | 11 | Batch 11 — `apps/wakery/` (116); generic plist and installer in place of the originals | D1, D2, D3 | done | `…/batch-11-apps-wakery`, PR #12 |
 | 12 | Authored material — README, LICENSE, contribution stance | D3 | done | `…/step-12-authored-material`, PR #13 |
-| 13 | Release note for an AI agent, written last | D4 | pending | |
-| 14 | Review, release record, `dev → main`, tag | D5 | pending | |
+| 13 | Release note for an AI agent, written last | D4 | done | `…/release`, `docs/releases/release_v2026.10.13/agent-notes.md` |
+| 14 | Review, release record, `dev → main`, tag | D5 | done | `…/release`, `review_2026.10.13.14.11.41.md`, tag `v2026.10.13` |
 
 ## Trail
 
@@ -36,3 +36,4 @@ Each batch is one lane and one pull request into `dev`. A batch is reviewed firs
 - 2026-10-13 — Batch 10: Foundry's two estate defaults (keystore token directory, project storage path) become required inputs. Foundry's standing-fixture test assumes a Foundry-founded tree; the published tree is an extraction, so that one test skips itself when the skeleton is absent.
 - 2026-10-13 — Batch 11: Wakery's project storage path becomes a required input, as Foundry's did. The one-off bootstrap and smoke scripts stop carrying the original instance's project key, GitHub ids and issue numbers and take them as arguments. The launchd plist ships as a template with two path tokens; the installer renders it and runs no migration, which stays the owner role's separate act.
 - 2026-10-13 — Step 12: the README states that release 1 is a reading release and lists what an operator supplies before it runs; the contribution stance is the Principal's — take what you need and build further, nothing to send back; MIT license.
+- 2026-10-13 — Steps 13 and 14 on the release lane: the agent release note is written beside the release record, the Principal's review called the milestone complete and releasable as it stands, and the release goes out as `v2026.10.13`.

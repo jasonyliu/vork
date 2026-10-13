@@ -1,6 +1,6 @@
 # Milestone: Conduction framework — the first release (`milestone_v2026.10.10_conduction-framework`)
 
-**Status:** `Active (started 2026-10-10)`
+**Status:** `Completed (2026-10-13)` — released as `v2026.10.13`, `docs/releases/release_v2026.10.13/release.md`
 
 ## Scope
 
