@@ -1,11 +1,7 @@
 # Contributing
 
-Release 1 is a historical release. It is frozen at its tag and stays there: the conduction framework it publishes is retired, and its code takes no further changes here.
+This release is a record of an attempt, published so that it can be read. It is frozen at its tag, and it is not a project looking for contributors: the framework it holds is retired, and nothing here is going to be developed further.
 
-**Issues are welcome.** If you bring the framework up and find something the README's lists miss, open an issue and say what you ran, what you expected and what happened. The lists are kept honest from what readers report.
+Take what you need and build further as you wish. The license is MIT; fork it, lift a piece of it, or use it as a reference for your own design. There is no process to follow and nothing to send back.
 
-**Pull requests against the framework are declined.** A fix to the retired code would ship nothing anyone runs. Pull requests that correct the README's three lists, the release note or a documentation error are read and merged.
-
-**The kit is where work continues.** Release 2 carries the project convention, Foundry and the skills that are in daily use. Its contribution terms arrive with it.
-
-By contributing you agree that your contribution is licensed under the MIT License in `LICENSE`.
+If you read something here that is plainly wrong, an issue is welcome and the correction will be noted. Pull requests are not taken.

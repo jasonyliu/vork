@@ -93,4 +93,4 @@ Releases are tagged `v<YYYY.MM.DD>`. Release 1 stays at its tag; later releases 
 
 ## License
 
-MIT. See `LICENSE`. Contribution terms are in `CONTRIBUTING.md`.
+MIT. See `LICENSE`. This release takes no contributions; take what you need and build further as you wish, as `CONTRIBUTING.md` says.
