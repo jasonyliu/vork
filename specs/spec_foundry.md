@@ -1,21 +1,22 @@
 # Foundry
 
-Foundry turns an input bundle into a project container that follows `rules/PROJECT.md` in one invocation, GitHub side and local side, and opens milestones: `kickoff` creates the milestone record on its draft lane for the Principal and the agent to settle in conversation. Foundry scaffolds structure; conversation fills content. Contracts: `spec_foundry-interface.md`. Artifacts and identifiers: `spec_foundry-data.md`.
+Foundry turns an input bundle into a project container that follows `rules/PROJECT.md` in one invocation, GitHub side and local side, records the founding in the machine's project registry, and opens milestones: `kickoff` creates the milestone record on its draft lane for the Principal and the agent to settle in conversation. Foundry scaffolds structure; conversation fills content. Contracts: `spec_foundry-interface.md`. Artifacts and identifiers: `spec_foundry-data.md`.
 
-Source lives at `apps/foundry/` (TypeScript/Node CLI, Node 22 + tsx, `@octokit/rest` + `@octokit/graphql`; the token-file model is the single auth surface). It runs from the operator's Vork clone at a release tag (`spec_kit.md §Run surface`).
+Source lives at `apps/foundry/` (TypeScript/Node CLI, Node 22 + tsx, `@octokit/rest`; the token-file model is the single auth surface). It runs from the operator's Vork clone at a release tag (`spec_kit.md §Run surface`).
 
 ## Bootstrap flow
 
 ```mermaid
 flowchart TD
     A[Preflight] -->|fail exit 3| Z[abort, zero mutations]
-    A --> B[GitHub bootstrap<br/>repo, board, labels, grant]
+    A --> B[GitHub bootstrap<br/>repo, labels, grant]
     B -->|fail exit 4| Y[event trail marks run_failed]
     B --> C[Local render + clone]
     C -->|fail exit 5| Y
     C --> D[Scaffold commit + push main, create dev]
     D --> E[Rulesets]
-    E --> H[run_finished, exit 0]
+    E --> R[Registry entry]
+    R --> H[run_finished, exit 0]
 ```
 
 Every act streams a `resource` event into the run event log as it completes (`spec_foundry-data.md §Run events`); a failed run's trail already covers everything that ran.
@@ -26,8 +27,9 @@ Every check passes before the first mutation:
 
 - Load the environment (`spec_foundry-interface.md §Environment`); a missing required var exits 2.
 - Validate the bundle per `spec_foundry-interface.md §Input bundle`.
-- Load the owner token from `FOUNDRY_OWNER_TOKEN_PATH`; its `GET /user` login is the owner; verify scopes (`repo`, `project` on a classic token; a fine-grained token exposes none and passes). Load and authenticate the work token from `FOUNDRY_WORK_TOKEN_PATH`, the work account every session commits and pushes with.
-- Repo name: exists under the owner → resume case, continue; exists under a foreign owner → abort. Board title: more than one existing match → abort.
+- Load the owner token from `FOUNDRY_OWNER_TOKEN_PATH`; its `GET /user` login is the owner and its `plan.name` the owner's plan; verify scopes (`repo` on a classic token; a fine-grained token exposes none and passes). Load and authenticate the work token from `FOUNDRY_WORK_TOKEN_PATH`, the work account every session commits and pushes with.
+- Plan gate: `plan.name` is `free`, `visibility` is `private` and `FOUNDRY_RULESET` is `standard` → exit 3: "a free plan takes no branch protection on a private repository: set visibility public, or FOUNDRY_RULESET=none". Every other combination passes. A response without `plan` records the plan as `unknown` and passes; a ruleset the plan refuses then fails at its own stage, exit 4, named.
+- Repo name: exists under the owner → resume case, continue; exists under a foreign owner → abort.
 - Storage path exists and is writable; `<project_key>/` may pre-exist only when it is a prior run of the same project: its `main/` clone's git origin points at the owner's `<project_key>` repo. Anything else at that path aborts.
 - Startup lint on the skeleton (`spec_foundry-data.md §Verification`).
 
@@ -35,11 +37,9 @@ Every check passes before the first mutation:
 
 Sub-steps in order, each streaming its resource event; artifact shapes per `spec_foundry-data.md §GitHub artifacts`:
 
-- Create the repo (REST `POST /user/repos` under the owner token), then PATCH settings.
-- Create the board (GraphQL `createProjectV2`); existing same-title board → capture node ID. GitHub's default fields stand as shipped: the board is the project's bugs, enhancements and defects queue on stock vocabulary.
-- Link repo to board (`linkProjectV2ToRepository`, idempotent).
+- Create the repo (REST `POST /user/repos` under the owner token, `private` per the bundle's `visibility`), then PATCH settings.
 - Upsert the issue-queue labels; GitHub's auto-generated defaults stand; Foundry adds.
-- Grant: probe repo membership for the work account → invite `push` under the owner token → accept with the work token → GraphQL Project `WRITER` grant (an upsert, applied every run). A failed grant records `failed` and continues.
+- Grant: probe repo membership for the work account → invite `push` under the owner token → accept with the work token. A failed grant records `failed` and continues.
 - Failure anywhere here: the event trail carries the completed sub-steps plus `run_failed`; exit 4.
 
 ### Local render + clone
@@ -57,9 +57,13 @@ Sub-steps in order, each streaming its resource event; artifact shapes per `spec
 
 Apply `protect-main` and `protect-dev` per the committed shapes (skipped wholly when `FOUNDRY_RULESET=none`); an existing same-name ruleset converges by delta, recording it.
 
+### Registry entry
+
+Upsert the project's entry in `<foundry-var>/projects.json` (`spec_foundry-data.md §Registry`): key, name, owner, repository, visibility, ruleset, owner plan, path, `founded_at` (kept from the first run), `updated_at` and `run_id` (this run). Written whole and atomically (temp file, rename); a `registry` resource event records `created` or `updated`. The registry is the machine's inventory of founded projects and the seed for anything built on it later; nothing in the kit reads it except `foundry list`.
+
 ### Run close
 
-`run_finished` ends the event trail; the log's path prints. The trail lives in Foundry's own runtime `var/`; execution by-products are runtime data.
+`run_finished` ends the event trail; the log's path prints. The trail and the registry live in Foundry's own runtime `var/`; execution by-products are runtime data.
 
 ## Idempotency and resume
 
@@ -67,18 +71,23 @@ Re-running with the same bundle always resumes, state-based: existing artifacts 
 
 | Resource | Detect by | On collision |
 |---|---|---|
-| repo / board | name / title under owner | capture node ID, continue |
+| repo | name under owner | capture node ID, continue |
 | label | name on repo | record color drift |
 | skeleton file | path exists | skip; existing wins |
-| repo grant / Project grant | membership probe / (upsert) | `already_collaborator` / `granted` again |
+| repo grant | membership probe | `already_collaborator` |
 | `main/` clone | `HEAD` resolves | torn → remove, re-clone, drift |
 | `dev` / ruleset | ref / name | skip / converge by delta, recorded |
+| registry entry | key in `projects.json` | `updated`, `founded_at` kept |
 
 A failed run re-runs and resumes, whatever stage it died at; resumption is state-based against the live surfaces, and the run's event trail names what completed, the cleanup target list. Recovery is always a re-run. Rate limits are honored with bounded waits (two retries, `Retry-After` capped at 60 s).
 
 ## Verify
 
 `foundry verify --against <path>`: compare structure only: every canonical path present, record templates byte-identical to the kit's set, the root README present. Report per path, a read-only comparison, exit 0/7. The Vork clone's own tree is the standing fixture: it carries every skeleton path and the canonical template set, so `verify --against <vork clone>` exits 0 at every release; a failure there means the skeleton inventory and the tree disagree, and Foundry is fixed before anything real is bootstrapped.
+
+## List
+
+`foundry list`: print the registry as a table, one row per entry: key, name, visibility, ruleset, path, founded date. An absent or empty registry prints `no projects founded from this clone`, exit 0. An unparseable registry exits 5 naming the file.
 
 ## Kickoff
 
@@ -88,13 +97,15 @@ Opens a milestone, in the project's `main/` clone:
 - Create the lane `feature/milestone_v<YYYY.MM.DD>_<slug>/draft` from `origin/dev`; render `milestone.md` from the canonical template: title, slug, `Status: Active (started <date>)`, Scope seeded with `--note`, every other section left as the template's placeholder; commit under the work identity (`kickoff: open milestone_v<date>_<slug>`); push the lane.
 - Print the lane and the record path, exit 0; git or filesystem failure exits 5 naming the act.
 
-The Draft is then settled in conversation on that lane; its merge to `dev` marks the milestone Active in the charter.
+The Draft is then settled in conversation on that lane; its merge to `dev` marks the milestone Active in the charter. Kickoff leaves the registry untouched.
 
 ## Verification
 
-- Fresh bootstrap: the artifact set equals the `spec_foundry-data.md` inventory exactly, and only it; the run event trail under Foundry's var ends `run_finished`.
-- Kill the run after the board step → re-run completes the remainder without disturbing existing artifacts; the two event trails together cover every resource exactly once as created-or-skipped.
+- Fresh bootstrap: the artifact set equals the `spec_foundry-data.md` inventory exactly, and only it; the registry holds one entry for the key; the run event trail under Foundry's var ends `run_finished`.
+- Kill the run after the repo step → re-run completes the remainder without disturbing existing artifacts; the two event trails together cover every resource exactly once as created-or-skipped; the registry entry is one, `updated`, `founded_at` from the first run.
 - Manual label-color change → re-run completes, the event trail records the drift, live label untouched.
-- `--dry-run` leaves GitHub untouched and the storage path empty.
+- Plan gate: a mocked `plan.name: free` with `visibility: private` and `FOUNDRY_RULESET=standard` exits 3 before any API mutation; the same with `visibility: public`, or with `FOUNDRY_RULESET=none`, passes preflight; a `pro` plan passes every combination.
+- `--dry-run` leaves GitHub, the storage path and the registry untouched.
 - `verify --against <vork clone>` exits 0; deleting one canonical template from a copy exits 7 naming the path.
+- `list` after two foundings prints two rows; on a fresh clone prints the empty message.
 - Kickoff → the milestone folder and `milestone.md` on the pushed draft lane; a second call reports the existing folder; a malformed `--milestone` exits 2.
