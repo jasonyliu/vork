@@ -24,6 +24,14 @@ The next milestone, to be opened by Foundry kickoff from a fresh session on the 
 
 **First act after kickoff.** A research record inventorying every estate entanglement in those five pieces — where it lives, what the generic form is — written against the sources above; the specs follow from it; the Principal's preview before any lane is cut. The extraction discipline of release 1 applies: estate out, placeholders in prose only, required inputs in code, secret scan and retired-term search before every push.
 
+### OpenClaw as a deployment surface (2026-10-14)
+
+Release 2 treats every consumer of the kit as a deployment surface and ships two, Claude Code and Codex. OpenClaw is the third the Principal runs: its agents receive context through a bootstrap hook that renders configured sources into a managed block in each agent's workspace documents, and the kit's rule and skills would reach an OpenClaw agent the same way. Bringing that hook into Vork is a milestone of its own: the hook, its configuration contract, and a `deploy_openclaw` manual. Deferred from release 2 by the Principal's word on 2026-10-14 ("too big to squeeze into this milestone").
+
+**Trail:**
+
+- 2026-10-14 — added at the Draft of `milestone_v2026.10.14_standalone-kit`.
+
 ## Skipped
 
 ## Done
