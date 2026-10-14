@@ -16,7 +16,7 @@ Release 2: Foundry, the PROJECT rule, the foundry, release and techspec skills a
 
 ## Research
 
-- {related research records that informed this milestone}
+- `docs/research/research_20261014_estate-entanglement/` — every estate entanglement in the six pieces, the generic form of each, and the evidence for the open questions (storage root, registry, single account)
 
 ## Specs
 
