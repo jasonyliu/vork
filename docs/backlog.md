@@ -22,7 +22,17 @@ The next milestone, to be opened by Foundry kickoff from a fresh session on the 
 
 **Sources, on the consumer project's `dev` at tag `v2026.10.12.r2`:** `docs/agents/rules/PROJECT.md`; `docs/agents/skills/{foundry,release,techspec}/`; `apps/foundry/` (the version that founded this repository, 2026-10-10); `docs/conventions/templates/` (eleven); `provisions/codex/deploy`.
 
+**Trail.** 2026-10-14 — kicked off as `milestone_v2026.10.14_standalone-kit`; the research record landed; rulings at Draft: database registry out, JSON registry in Foundry's `var/` in; storage root parameterized with `~/Vork/projects/` suggested; two accounts and both rulesets stay; project board dropped (the repository's issues are the queue); free-plan matrix with a `visibility` bundle field and a preflight gate; harnesses are deployment surfaces (`claude`, `codex`), the installer is the deployment; OpenClaw deferred to its own item.
+
 **First act after kickoff.** A research record inventorying every estate entanglement in those five pieces — where it lives, what the generic form is — written against the sources above; the specs follow from it; the Principal's preview before any lane is cut. The extraction discipline of release 1 applies: estate out, placeholders in prose only, required inputs in code, secret scan and retired-term search before every push.
+
+### OpenClaw as a deployment surface (2026-10-14)
+
+Release 2 treats every consumer of the kit as a deployment surface and ships two, Claude Code and Codex. OpenClaw is the third the Principal runs: its agents receive context through a bootstrap hook that renders configured sources into a managed block in each agent's workspace documents, and the kit's rule and skills would reach an OpenClaw agent the same way. Bringing that hook into Vork is a milestone of its own: the hook, its configuration contract, and a `deploy_openclaw` manual. Deferred from release 2 by the Principal's word on 2026-10-14 ("too big to squeeze into this milestone").
+
+**Trail:**
+
+- 2026-10-14 — added at the Draft of `milestone_v2026.10.14_standalone-kit`.
 
 ## Skipped
 

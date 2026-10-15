@@ -34,6 +34,7 @@ Publish how one engineer builds software with AI: the kit in daily use, and the 
 
 | Key | Description | Status | Date | Release | Path |
 |---|---|---|---|---|---|
+| `milestone_v2026.10.14_standalone-kit` | Standalone kit — release 2: Foundry, the PROJECT rule, the three skills and the templates become Vork's own, untangled from the estate, deployed to Claude and Codex by one installer; the framework tree leaves `main` and stays at `v2026.10.13` | Active | started 2026-10-14 | — | `docs/milestones/milestone_v2026.10.14_standalone-kit/` |
 | `milestone_v2026.10.10_conduction-framework` | Conduction framework — the first release: the retired multi-agent framework published whole, reviewed file by file in eleven batches, renamed to Vork, with the README's three lists and a release note written for an AI agent | Completed | 2026-10-10 → 2026-10-13 | `v2026.10.13` | `docs/milestones/milestone_v2026.10.10_conduction-framework/` |
 
 ## Provision
