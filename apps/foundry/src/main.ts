@@ -1,4 +1,4 @@
-import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { loadBundle, validateBundle } from './bundle.js';
@@ -8,14 +8,15 @@ import { buildGitOps } from './gitops.js';
 import { authIdentity, buildGitHubApi } from './github/octokit.js';
 import { milestoneFolderName, openMilestoneRecord } from './milestones.js';
 import { runBootstrapPipeline } from './pipeline.js';
+import { formatRegistry, readRegistry } from './registry.js';
+import { templateSource } from './skeleton.js';
 import type { Bundle } from './types.js';
 import { formatVerifyReport, verifyAgainst } from './verify.js';
 
 // CLI entrypoint (`spec_foundry-interface.md §CLI`). Per-run flags override the
-// environment; the environment overrides built-in defaults. Invoked via
-// `bin/foundry`.
+// environment. Invoked via `bin/foundry`.
 
-// Foundry var — dev: main/apps/foundry/var; deployed: the production clone's copy
+// Foundry var: `apps/foundry/var/` beside the app, or FOUNDRY_VAR
 const FOUNDRY_VAR = process.env['FOUNDRY_VAR'] ?? join(APP_DIR, 'var');
 
 interface Flags {
@@ -59,7 +60,7 @@ function parseFlags(args: string[]): Flags {
   return flags;
 }
 
-// Interactive bundle capture: the mission core.
+// Interactive bundle capture: the mission core, visibility defaulting to private.
 async function promptBundle(): Promise<Bundle> {
   const rl = createInterface({ input: process.stdin, output: process.stderr });
   try {
@@ -67,6 +68,8 @@ async function promptBundle(): Promise<Bundle> {
     for (const field of ['project_name', 'project_key', 'mission', 'description', 'scope'] as const) {
       raw[field] = (await rl.question(`${field}: `)).trim();
     }
+    const visibility = (await rl.question('visibility [private]: ')).trim();
+    if (visibility !== '') raw['visibility'] = visibility;
     return validateBundle(raw);
   } finally {
     rl.close();
@@ -133,10 +136,16 @@ async function commandKickoff(flags: Flags): Promise<number> {
     throw new FoundryError(EXIT.PREFLIGHT, `work token failed to authenticate (${env.work_token_path}): ${error instanceof Error ? error.message : String(error)}`);
   });
   const mainDir = join(expandHome(flags.storagePath ?? env.project_storage_path), flags.project, 'main');
-  const template = readFileSync(join(APP_DIR, 'assets', 'skeleton', 'docs', 'conventions', 'templates', 'milestone.md'), 'utf8');
+  const template = templateSource('milestone.md');
   const result = openMilestoneRecord(buildGitOps(), { mainDir, folder, title, date: now, note: flags.note, template, workToken });
   process.stdout.write(`${result.lane} ${result.recordPath}\n`);
   if (result.existing) process.stderr.write(`milestone record already exists — reported as found\n`);
+  return EXIT.SUCCESS;
+}
+
+// `foundry list`: the machine's project registry (`spec_foundry.md §List`).
+function commandList(): number {
+  process.stdout.write(`${formatRegistry(readRegistry(FOUNDRY_VAR))}\n`);
   return EXIT.SUCCESS;
 }
 
@@ -151,8 +160,10 @@ async function main(): Promise<number> {
       return commandVerify(flags);
     case 'kickoff':
       return commandKickoff(flags);
+    case 'list':
+      return commandList();
     case undefined:
-      throw usageError('usage: foundry <bootstrap|verify|kickoff> [flags]');
+      throw usageError('usage: foundry <bootstrap|verify|kickoff|list> [flags]');
     default:
       throw usageError(`unknown command: ${command}`);
   }

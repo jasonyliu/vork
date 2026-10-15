@@ -4,30 +4,24 @@ import { join } from 'node:path';
 import { EXIT, FoundryError, localError } from './errors.js';
 import type { GitOps } from './gitops.js';
 import { RunEventLog, sanitize } from './events.js';
-import { openRegistryPool, pingRegistry, registerProject } from './registry.js';
-import type { RegistryOutcome } from './registry.js';
-import type { Queryable as RegistryDb } from '@psyphix/data';
-import type { PreflightDeps, PreflightResult } from './preflight.js';
-import { runPreflight } from './preflight.js';
+import { PLAN_GATE_MESSAGE, runPreflight, type PreflightDeps, type PreflightResult } from './preflight.js';
+import { upsertProject, type RegistryOutcome } from './registry.js';
 import { renderSkeleton, writeSkeleton } from './render.js';
 import { ensureDevBranch, ensureRulesets, runGitHubBootstrap, type BootstrapContext } from './github/bootstrap.js';
 import type { Bundle, FoundryEnv } from './types.js';
 import type { VariableValues } from './variables.js';
 
 // The bootstrap staged pipeline (`spec_foundry.md §Bootstrap flow`): preflight
-// (every check before the first mutation) → GitHub bootstrap → register (the
-// `project` row) → local render + clone → scaffold commit + push + dev →
-// rulesets. The audit trail is the append-only run event log — each act is
-// recorded as it completes, so a failed run's trail already covers everything
-// that ran; re-running resumes state-based.
+// (every check before the first mutation) → GitHub bootstrap → local render +
+// clone → scaffold commit + push + dev → rulesets → registry entry. The audit
+// trail is the append-only run event log — each act is recorded as it
+// completes, so a failed run's trail already covers everything that ran;
+// re-running resumes state-based.
 
 export interface PipelineDeps extends PreflightDeps {
   git: GitOps;
   foundryVar: string;
   log(message: string): void;
-  // injectable registry connection (tests substitute pg-mem); default opens a
-  // pg pool from the environment's PSYPHIX_DATABASE_* section
-  openRegistry?: (config: NonNullable<FoundryEnv['database']>) => Promise<{ db: RegistryDb; close(): Promise<unknown> }>;
 }
 
 export interface PipelineOptions {
@@ -53,7 +47,7 @@ export async function runBootstrapPipeline(options: PipelineOptions, deps: Pipel
   const runId = randomUUID();
 
   const preflight: PreflightResult = await runPreflight(bundle, env, options.storagePath, deps);
-  deps.log(`preflight passed — owner ${preflight.ownerLogin}, work account ${preflight.work.login}`);
+  deps.log(`preflight passed — owner ${preflight.ownerLogin} (plan ${preflight.ownerPlan}), work account ${preflight.work.login}`);
 
   const values: VariableValues = {
     project_name: bundle.project_name,
@@ -68,8 +62,8 @@ export async function runBootstrapPipeline(options: PipelineOptions, deps: Pipel
   };
 
   if (options.dryRun) {
-    // preflight + render to a scratch path; GitHub, the registry, and the
-    // storage path stay untouched
+    // preflight + render to a scratch path; GitHub, the storage path and the
+    // registry stay untouched
     const scratch = join(deps.foundryVar, 'dry-run', `${bundle.project_key}_${utcCompact(startedAt)}`);
     const written = writeSkeleton(renderSkeleton(values), scratch);
     deps.log(`dry-run: rendered ${written.length} skeleton files to ${scratch}`);
@@ -83,7 +77,7 @@ export async function runBootstrapPipeline(options: PipelineOptions, deps: Pipel
     api: preflight.api,
     ownerLogin: preflight.ownerLogin,
     projectKey: bundle.project_key,
-    projectName: bundle.project_name,
+    visibility: bundle.visibility,
     workLogin: preflight.work.login
   };
 
@@ -98,42 +92,14 @@ export async function runBootstrapPipeline(options: PipelineOptions, deps: Pipel
     }
   }
 
-  // GitHub bootstrap — repo, board, link, labels, grants; resource events
-  // stream into the log as each sub-step completes
+  // GitHub bootstrap — repo, labels, grant; resource events stream into the
+  // log as each sub-step completes
   const gh = await stage(
     () => runGitHubBootstrap(ctx, log),
     (message) => new FoundryError(EXIT.GITHUB, message)
   );
-  values.project_node_id = gh.board.id;
   values.repo_node_id = gh.repo.nodeId;
-  deps.log(`github bootstrap done — repo ${gh.repo.nodeId}, board ${gh.board.id}`);
-
-  // register — a `project` row IS the project's creation (spec_database.md
-  // §11); written through foundry's own DB layer, idempotently. A missing
-  // database in the environment → standalone mode, skipped with an event.
-  let registry: RegistryOutcome | undefined;
-  if (env.database !== undefined) {
-    const database = env.database;
-    registry = await stage(async () => {
-      const dbFactory = deps.openRegistry ?? (async () => {
-        const pool = openRegistryPool(database);
-        return { db: pool, close: () => pool.end() };
-      });
-      const { db, close } = await dbFactory(database);
-      try {
-        await pingRegistry(db);
-        const outcome = await registerProject(db, { projectKey: bundle.project_key, projectName: bundle.project_name });
-        log.push({ resource: 'registry', ...outcome });
-        deps.log(`registry: project ${outcome.project} (${outcome.project_id})`);
-        return outcome;
-      } finally {
-        await close();
-      }
-    }, localError);
-  } else {
-    log.push({ resource: 'registry', project_id: null, project: 'skipped', skipped_reason: 'standalone mode — PSYPHIX_DATABASE_HOST absent' });
-    deps.log('registry: skipped (standalone mode — PSYPHIX_DATABASE_HOST absent)');
-  }
+  deps.log(`github bootstrap done — repo ${gh.repo.nodeId}`);
 
   // local render + clone + the empty team/. The scaffold is the repository's
   // first commit, so on a fresh founding the remote is empty: the clone lands
@@ -186,13 +152,37 @@ export async function runBootstrapPipeline(options: PipelineOptions, deps: Pipel
     return head;
   }, localError);
 
-  // rulesets, last — both standing branches exist before protection
+  // rulesets — both standing branches exist before protection. A refusal the
+  // plan gate could not foresee (plan unknown to preflight) is named with its
+  // ways out; every other artifact already stands, so a re-run resumes.
   await stage(async () => {
     log.push(...(await ensureRulesets(ctx, env.ruleset)));
     deps.log('rulesets done');
-  }, (message) => new FoundryError(EXIT.GITHUB, message));
+  }, (message) => {
+    const hint = bundle.visibility === 'private' && preflight.ownerPlan !== 'pro'
+      ? ` — ${PLAN_GATE_MESSAGE}, then re-run: every other artifact is skipped as existing`
+      : '';
+    return new FoundryError(EXIT.GITHUB, `rulesets failed: ${message}${hint}`);
+  });
+
+  // registry entry, last — the project exists in full before it is listed
+  const registry = await stage(async () => {
+    const outcome = upsertProject(deps.foundryVar, bundle.project_key, {
+      name: bundle.project_name,
+      owner: preflight.ownerLogin,
+      repository: `https://github.com/${preflight.ownerLogin}/${bundle.project_key}`,
+      visibility: bundle.visibility,
+      ruleset: env.ruleset,
+      owner_plan: preflight.ownerPlan,
+      path: preflight.projectDir,
+      run_id: runId
+    }, startedAt.toISOString());
+    log.push({ resource: 'registry', path: outcome.path, created_or_updated: outcome.outcome });
+    deps.log(`registry: ${outcome.outcome} ${bundle.project_key} in ${outcome.path}`);
+    return outcome;
+  }, localError);
 
   log.emit('run_finished', { resources: log.records.length });
   deps.log(log.path);
-  return { exitCode: EXIT.SUCCESS, eventsPath: log.path, ...(registry !== undefined ? { registry } : {}) };
+  return { exitCode: EXIT.SUCCESS, eventsPath: log.path, registry };
 }

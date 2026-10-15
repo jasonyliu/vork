@@ -1,18 +1,16 @@
 import { Octokit } from '@octokit/rest';
-import { graphql } from '@octokit/graphql';
-import type { GitHubApi, RepoInfo, BoardInfo, LabelInfo, RulesetInfo } from './api.js';
+import type { GitHubApi, RepoInfo, LabelInfo, RulesetInfo } from './api.js';
+import type { Visibility } from '../types.js';
 
-// GitHubApi over @octokit/rest + @octokit/graphql. The PAT-file model is the
-// single auth surface — ambient `gh` auth is never consulted. `acceptorTokens`
-// maps each grantable login to a token of that account, for in-run invitation
-// acceptance (`spec_foundry-data.md §GitHub artifacts`, collaborator grants).
+// GitHubApi over @octokit/rest. The token-file model is the single auth
+// surface — ambient `gh` auth is never consulted. `acceptorTokens` maps each
+// grantable login to a token of that account, for in-run invitation acceptance
+// (`spec_foundry-data.md §GitHub artifacts`, collaborator grant).
 
 export interface OctokitApiOptions {
   mainToken: string;
   acceptorTokens: Map<string, string>;
 }
-
-type GraphqlClient = typeof graphql;
 
 const RATE_LIMIT_MAX_ATTEMPTS = 3;
 const RATE_LIMIT_MAX_WAIT_MS = 60_000;
@@ -47,62 +45,55 @@ function isNotFound(error: unknown): boolean {
 export interface TokenIdentity {
   login: string;
   nodeId: string;
-  scopes: string[] | null; // null for fine-grained PATs (no x-oauth-scopes header)
+  scopes: string[] | null; // null for fine-grained tokens (no x-oauth-scopes header)
+  plan: string | null; // `plan.name` when the token carries read:user or user; null otherwise
 }
 
-// Authenticate one PAT: its `GET /user` login is the identity
-// (`spec_foundry.md §Preflight`).
+// Authenticate one token: its `GET /user` login is the identity
+// (`spec_foundry.md §Preflight`); the plan rides along when the scope allows.
 export async function authIdentity(token: string): Promise<TokenIdentity> {
   const rest = new Octokit({ auth: token });
   const response = await withRateLimitRetry(() => rest.users.getAuthenticated());
   const scopesHeader = (response.headers as Record<string, string | undefined>)['x-oauth-scopes'];
+  const plan = (response.data as { plan?: { name?: string } }).plan?.name;
   return {
     login: response.data.login,
     nodeId: response.data.node_id,
-    scopes: scopesHeader === undefined ? null : scopesHeader.split(',').map((scope) => scope.trim()).filter((scope) => scope !== '')
+    scopes: scopesHeader === undefined ? null : scopesHeader.split(',').map((scope) => scope.trim()).filter((scope) => scope !== ''),
+    plan: typeof plan === 'string' && plan !== '' ? plan : null
   };
 }
 
 export function buildGitHubApi(options: OctokitApiOptions): GitHubApi {
   const rest = new Octokit({ auth: options.mainToken });
-  const gql: GraphqlClient = graphql.defaults({ headers: { authorization: `token ${options.mainToken}` } });
 
   return {
-
-
-    async userNodeId(login) {
-      const { data } = await withRateLimitRetry(() => rest.users.getByUsername({ username: login }));
-      return data.node_id;
-    },
-
     async findRepo(owner, name): Promise<RepoInfo | null> {
       try {
         const { data } = await withRateLimitRetry(() => rest.repos.get({ owner, repo: name }));
-        return { nodeId: data.node_id, ownerLogin: data.owner.login, ownerNodeId: data.owner.node_id, name: data.name };
+        return { nodeId: data.node_id, ownerLogin: data.owner.login, name: data.name };
       } catch (error) {
         if (isNotFound(error)) return null;
         throw error;
       }
     },
 
-    async createUserRepo(name): Promise<RepoInfo> {
+    async createUserRepo(name, visibility: Visibility): Promise<RepoInfo> {
       const { data } = await withRateLimitRetry(() =>
         rest.repos.createForAuthenticatedUser({
           name,
-          private: true,
+          private: visibility === 'private',
           auto_init: false,
           has_issues: true,
           has_wiki: false,
-          // the Projects setting is what surfaces the linked ProjectV2 board on
-          // the repository side (classic projects no longer exist) — keep it on
-          has_projects: true
+          has_projects: false
         })
       );
-      return { nodeId: data.node_id, ownerLogin: data.owner.login, ownerNodeId: data.owner.node_id, name: data.name };
+      return { nodeId: data.node_id, ownerLogin: data.owner.login, name: data.name };
     },
 
     async patchRepoSettings(owner, name) {
-      // merge-commit only — squash/rebase disabled (`PROJECT.md §Branching`
+      // merge-commit only — squash/rebase disabled (`rules/PROJECT.md §Branches`
       // merges are --no-ff); default branch pinned to main
       await withRateLimitRetry(() =>
         rest.repos.update({
@@ -116,48 +107,6 @@ export function buildGitHubApi(options: OctokitApiOptions): GitHubApi {
       );
     },
 
-    async findBoardsByTitle(ownerLogin, title): Promise<BoardInfo[]> {
-      const response = await withRateLimitRetry(() =>
-        gql<{ user: { projectsV2: { nodes: { id: string; title: string; number: number }[] } } }>(
-          // the variable is named $search: @octokit/graphql reserves "query"
-          // (and method/url/headers/request/baseUrl/mediaType) as option names
-          `query ($login: String!, $search: String!) {
-             user(login: $login) { projectsV2(first: 20, query: $search) { nodes { id title number } } }
-           }`,
-          { login: ownerLogin, search: title }
-        )
-      );
-      return response.user.projectsV2.nodes.filter((node) => node.title === title);
-    },
-
-
-    async createBoard(ownerNodeId, title): Promise<BoardInfo> {
-      const response = await withRateLimitRetry(() =>
-        gql<{ createProjectV2: { projectV2: { id: string; title: string; number: number } } }>(
-          `mutation ($ownerId: ID!, $title: String!) {
-             createProjectV2(input: { ownerId: $ownerId, title: $title }) { projectV2 { id title number } }
-           }`,
-          { ownerId: ownerNodeId, title }
-        )
-      );
-      return response.createProjectV2.projectV2;
-    },
-
-
-
-
-
-    async linkBoardToRepo(projectId, repoNodeId) {
-      await withRateLimitRetry(() =>
-        gql(
-          `mutation ($projectId: ID!, $repositoryId: ID!) {
-             linkProjectV2ToRepository(input: { projectId: $projectId, repositoryId: $repositoryId }) { clientMutationId }
-           }`,
-          { projectId, repositoryId: repoNodeId }
-        )
-      );
-    },
-
     async listLabels(owner, repo): Promise<LabelInfo[]> {
       const labels = await withRateLimitRetry(() => rest.paginate(rest.issues.listLabelsForRepo, { owner, repo, per_page: 100 }));
       return labels.map((label) => ({ name: label.name, color: label.color }));
@@ -166,8 +115,6 @@ export function buildGitHubApi(options: OctokitApiOptions): GitHubApi {
     async createLabel(owner, repo, name, color) {
       await withRateLimitRetry(() => rest.issues.createLabel({ owner, repo, name, color }));
     },
-
-
 
     async isCollaborator(owner, repo, login): Promise<boolean> {
       try {
@@ -191,22 +138,6 @@ export function buildGitHubApi(options: OctokitApiOptions): GitHubApi {
       if (token === undefined) throw new Error(`no acceptor token for login ${login}`);
       const acceptor = new Octokit({ auth: token });
       await withRateLimitRetry(() => acceptor.repos.acceptInvitationForAuthenticatedUser({ invitation_id: invitationId }));
-    },
-
-    // ProjectV2 exposes no collaborator listing (schema: only `teams`), so
-    // the grant is applied every run — updateProjectV2Collaborators upserts
-    // the role, so a repeat is a no-op on GitHub's side.
-    async grantBoardWriter(projectId, userNodeId) {
-      await withRateLimitRetry(() =>
-        gql(
-          `mutation ($projectId: ID!, $userId: ID!) {
-             updateProjectV2Collaborators(input: { projectId: $projectId, collaborators: [{ userId: $userId, role: WRITER }] }) {
-               clientMutationId
-             }
-           }`,
-          { projectId, userId: userNodeId }
-        )
-      );
     },
 
     async listRulesets(owner, repo): Promise<RulesetInfo[]> {
@@ -248,15 +179,6 @@ export function buildGitHubApi(options: OctokitApiOptions): GitHubApi {
 
     async createRef(owner, repo, ref, sha) {
       await withRateLimitRetry(() => rest.git.createRef({ owner, repo, ref, sha }));
-    },
-
-
-
-
-
-
-
-
-
+    }
   };
 }

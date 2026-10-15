@@ -45,3 +45,4 @@ Rulings at Draft (2026-10-14): the database registry leaves Foundry whole and a 
 | `spec_foundry.md` | edited | board removed; plan gate in preflight; JSON registry stage; `foundry list` |
 | `spec_foundry-interface.md` | edited | `visibility` bundle field; plan matrix; `list` command; `project` scope dropped |
 | `spec_foundry-data.md` | edited | §Registry (`projects.json` shape); board artifacts and events gone; default labels named |
+| `spec_foundry-interface.md` | edited | plan read needs `read:user`; unknown-plan path through the ruleset stage stated in the matrix |

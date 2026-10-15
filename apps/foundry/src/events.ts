@@ -2,32 +2,18 @@ import { appendFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 // The audit trail of one bootstrap run: append-only JSONL run events
-// (`spec_foundry-data.md §Run events`) — the same genre as wakery's event log.
-// One `resource` event per artifact touched, emitted as each act completes, so
-// a failed run's trail already covers everything that ran; registry state
-// lives in the DB (the register stage), never here. Replaces the retired
-// manifest (Principal ruling, 2026-08-25): a `project` row is the project's
-// creation — the durable state; events are the history.
+// (`spec_foundry-data.md §Run events`). One `resource` event per artifact
+// touched, emitted as each act completes, so a failed run's trail already
+// covers everything that ran. The registry entry is the durable state; events
+// are the history.
 
 export interface RepoRecord {
   resource: 'repo';
   name: string;
   node_id: string;
+  visibility: 'private' | 'public';
   created_or_skipped: 'created' | 'skipped';
   settings_applied: boolean;
-}
-
-export interface ProjectV2Record {
-  resource: 'project_v2';
-  title: string;
-  node_id: string;
-  created_or_skipped: 'created' | 'skipped';
-}
-
-export interface ProjectRepoLinkRecord {
-  resource: 'project_repo_link';
-  project_node_id: string;
-  repo_node_id: string;
 }
 
 export interface LabelRecord {
@@ -38,12 +24,10 @@ export interface LabelRecord {
   drift?: string;
 }
 
-
 export interface CollaboratorRecord {
   resource: 'collaborator';
   github_login: string;
   repo_invite_status: 'invited' | 'accepted' | 'already_collaborator' | 'failed';
-  project_grant_status: 'granted' | 'failed'; // an upsert — no already_granted is observable
   invitation_id?: number;
   accepted_at?: string;
   error?: string;
@@ -81,15 +65,12 @@ export interface BranchRecord {
 
 export interface RegistryRecord {
   resource: 'registry';
-  project_id: string | null;
-  project: 'created' | 'existing' | 'skipped';
-  skipped_reason?: string;
+  path: string;
+  created_or_updated: 'created' | 'updated';
 }
 
 export type ResourceRecord =
   | RepoRecord
-  | ProjectV2Record
-  | ProjectRepoLinkRecord
   | LabelRecord
   | CollaboratorRecord
   | RulesetRecord
@@ -97,7 +78,6 @@ export type ResourceRecord =
   | FileRecord
   | BranchRecord
   | RegistryRecord;
-
 
 // Sanitization per `spec_foundry-data.md §Run events`: a field whose name,
 // split on `_`/`-`/case boundaries, carries a secret-pattern segment is written
@@ -123,10 +103,6 @@ export function sanitize(value: unknown): unknown {
   }
   return value;
 }
-
-
-
-
 
 // One run's event log: `<foundry-var>/runs/<project_key>/run_<ts>_<runid8>.jsonl`
 // — unique by construction, runs accumulate side by side per project. Every

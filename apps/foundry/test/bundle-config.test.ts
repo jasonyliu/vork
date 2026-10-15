@@ -17,8 +17,8 @@ afterEach(() => {
 });
 
 const VALID_BUNDLE = {
-  project_name: 'Tutor Project',
-  project_key: 'tutor',
+  project_name: 'Sample Project',
+  project_key: 'sample',
   mission: 'm',
   description: 'd',
   scope: 's'
@@ -36,8 +36,12 @@ function expectUsage(fn: () => unknown, pattern: RegExp): void {
 }
 
 describe('bundle validation', () => {
-  it('accepts the mission core', () => {
-    expect(validateBundle(VALID_BUNDLE)).toEqual(VALID_BUNDLE);
+  it('accepts the mission core, visibility defaulting to private', () => {
+    expect(validateBundle(VALID_BUNDLE)).toEqual({ ...VALID_BUNDLE, visibility: 'private' });
+  });
+
+  it('accepts an explicit visibility', () => {
+    expect(validateBundle({ ...VALID_BUNDLE, visibility: 'public' }).visibility).toBe('public');
   });
 
   it.each(['project_name', 'project_key', 'mission', 'description', 'scope'])(
@@ -51,6 +55,11 @@ describe('bundle validation', () => {
   it('exits 2 naming a malformed project_key', () => {
     expectUsage(() => validateBundle({ ...VALID_BUNDLE, project_key: 'Bad-Key' }), /malformed: project_key/);
     expectUsage(() => validateBundle({ ...VALID_BUNDLE, project_key: '9lead' }), /malformed: project_key/);
+  });
+
+  it('exits 2 naming an unknown visibility', () => {
+    expectUsage(() => validateBundle({ ...VALID_BUNDLE, visibility: 'internal' }), /malformed: visibility/);
+    expectUsage(() => validateBundle({ ...VALID_BUNDLE, visibility: 7 }), /malformed: visibility/);
   });
 
   it.each(['channel', 'specialists', 'team'])('exits 2 on the retired %s field', (field) => {
@@ -68,34 +77,28 @@ describe('bundle validation', () => {
 
 const VALID_ENV: NodeJS.ProcessEnv = {
   FOUNDRY_OWNER_TOKEN_PATH: '/t/owner',
-  FOUNDRY_WORK_TOKEN_PATH: '/t/work'
+  FOUNDRY_WORK_TOKEN_PATH: '/t/work',
+  FOUNDRY_PROJECT_STORAGE_PATH: '/t/projects'
 };
 
 describe('environment', () => {
-  it('loads the required vars and applies the defaults; a missing database host means standalone', () => {
-    const env = loadEnv(VALID_ENV);
-    expect(env).toMatchObject({
+  it('loads the required vars and applies the ruleset default', () => {
+    expect(loadEnv(VALID_ENV)).toEqual({
       owner_token_path: '/t/owner',
       work_token_path: '/t/work',
       ruleset: 'standard',
-      project_storage_path: '~/Vork/projects'
+      project_storage_path: '/t/projects'
     });
-    expect(env.database).toBeUndefined();
   });
 
-  it('reads the platform PSYPHIX_DATABASE_* section with its defaults when a host is set', () => {
-    const env = loadEnv({ ...VALID_ENV, PSYPHIX_DATABASE_HOST: 'db', PSYPHIX_DATABASE_PASSWORD_PATH: '/t/pw' });
-    expect(env.database).toEqual({ host: 'db', port: 5432, name: 'psyphix', user: 'psyphix_app', password_path: '/t/pw' });
-  });
-
-  it.each(['FOUNDRY_OWNER_TOKEN_PATH', 'FOUNDRY_WORK_TOKEN_PATH'])('exits 2 naming a missing %s', (name) => {
+  it.each(['FOUNDRY_OWNER_TOKEN_PATH', 'FOUNDRY_WORK_TOKEN_PATH', 'FOUNDRY_PROJECT_STORAGE_PATH'])('exits 2 naming a missing %s', (name) => {
     expectUsage(() => loadEnv({ ...VALID_ENV, [name]: undefined }), new RegExp(`missing or empty: ${name}`));
     expectUsage(() => loadEnv({ ...VALID_ENV, [name]: '  ' }), new RegExp(`missing or empty: ${name}`));
   });
 
-  it('exits 2 when a database host is set without a password path, and on an invalid ruleset', () => {
-    expectUsage(() => loadEnv({ ...VALID_ENV, PSYPHIX_DATABASE_HOST: 'db' }), /PSYPHIX_DATABASE_PASSWORD_PATH/);
+  it('exits 2 on an invalid ruleset', () => {
     expectUsage(() => loadEnv({ ...VALID_ENV, FOUNDRY_RULESET: 'fancy' }), /FOUNDRY_RULESET/);
+    expect(loadEnv({ ...VALID_ENV, FOUNDRY_RULESET: 'none' }).ruleset).toBe('none');
   });
 
   it('loads apps/foundry/.env from the app directory, set values winning', () => {

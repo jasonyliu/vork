@@ -16,12 +16,12 @@ afterEach(() => {
   while (tempDirs.length > 0) rmSync(tempDirs.pop()!, { recursive: true, force: true });
 });
 
-// the standing fixture: psyphix's own tree must pass (`spec_foundry.md §Verify`)
-const PSYPHIX_TREE = join(import.meta.dirname, '..', '..', '..');
+// the standing fixture: the Vork clone's own tree passes (`spec_foundry.md §Verify`)
+const VORK_TREE = join(import.meta.dirname, '..', '..', '..');
 
 describe('verify --against', () => {
-  it('passes on the psyphix tree — the standing fixture', () => {
-    const result = verifyAgainst(PSYPHIX_TREE);
+  it('passes on the Vork tree — the standing fixture', () => {
+    const result = verifyAgainst(VORK_TREE);
     expect(result.findings).toEqual([]);
     expect(result.clean).toBe(true);
   });

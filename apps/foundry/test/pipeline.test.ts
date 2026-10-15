@@ -4,9 +4,8 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { EXIT, FoundryError } from '../src/errors.js';
 import type { GitOps } from '../src/gitops.js';
-import { runMigrations } from '@psyphix/data';
-import { createTestPool } from '@psyphix/data/testing';
 import { runBootstrapPipeline, type PipelineDeps, type PipelineOptions } from '../src/pipeline.js';
+import { readRegistry, registryPath } from '../src/registry.js';
 import type { Bundle, FoundryEnv } from '../src/types.js';
 import { FakeGitHubApi } from './fakes.js';
 
@@ -85,10 +84,10 @@ interface Harness {
   options: PipelineOptions;
   foundryVar: string;
   storage: string;
-  registryDb: any;
+  ownerPlan: string | null;
 }
 
-async function harness(): Promise<Harness> {
+function harness(ownerPlan: string | null = 'pro'): Harness {
   const root = tempDir();
   const storage = join(root, 'projects');
   const keystore = join(root, 'keystore');
@@ -103,39 +102,36 @@ async function harness(): Promise<Harness> {
     project_key: 'throwaway',
     mission: 'A one-paragraph mission.',
     description: 'The goal.',
-    scope: 'The boundary.'
+    scope: 'The boundary.',
+    visibility: 'private'
   };
   const env: FoundryEnv = {
     owner_token_path: join(keystore, 'owner.token'),
     work_token_path: join(keystore, 'work.token'),
     ruleset: 'standard',
-    project_storage_path: storage,
-    database: { host: 'mem', port: 5432, name: 'psyphix', user: 'psyphix_app', password_path: join(keystore, 'owner.token') }
+    project_storage_path: storage
   };
-
-  const registryDb = await createTestPool();
-  await runMigrations(registryDb);
 
   const api = new FakeGitHubApi();
   const git = new FakeGitOps();
+  const h: Harness = { api, git, foundryVar, storage, ownerPlan, deps: undefined as unknown as PipelineDeps, options: { bundle, env, storagePath: storage, dryRun: false } };
   const identities: Record<string, { login: string; nodeId: string }> = {
-    'owner-token-value': { login: 'jasonyliu', nodeId: 'U_owner' },
-    'work-token-value': { login: 'psyphix-claw', nodeId: 'U_psyphix-claw' }
+    'owner-token-value': { login: 'owner-login', nodeId: 'U_owner' },
+    'work-token-value': { login: 'work-login', nodeId: 'U_work' }
   };
-  const deps: PipelineDeps = {
+  h.deps = {
     authIdentity: async (token: string) => {
       const identity = identities[token];
       if (!identity) throw new Error('bad credentials');
-      return { ...identity, scopes: null };
+      return { ...identity, scopes: null, plan: token === 'owner-token-value' ? h.ownerPlan : null };
     },
     buildApi: () => api,
     originUrl: (repoDir) => git.originUrl(repoDir),
     git,
     foundryVar,
-    log: () => {},
-    openRegistry: async () => ({ db: registryDb, close: async () => {} })
+    log: () => {}
   };
-  return { api, git, deps, foundryVar, storage, registryDb, options: { bundle, env, storagePath: storage, dryRun: false } };
+  return h;
 }
 
 interface EventRun {
@@ -165,9 +161,18 @@ function readEventRuns(foundryVar: string): EventRun[] {
     });
 }
 
+async function expectFailure(h: Harness, options: PipelineOptions = h.options): Promise<FoundryError> {
+  try {
+    await runBootstrapPipeline(options, h.deps);
+  } catch (error) {
+    return error as FoundryError;
+  }
+  return expect.unreachable('expected the pipeline to fail') as never;
+}
+
 describe('bootstrap pipeline', () => {
-  it('runs the full staged pipeline, registers the project row, and finishes the event trail', async () => {
-    const h = await harness();
+  it('runs the full staged pipeline, writes the registry entry, and finishes the event trail', async () => {
+    const h = harness();
     const outcome = await runBootstrapPipeline(h.options, h.deps);
 
     expect(outcome.exitCode).toBe(EXIT.SUCCESS);
@@ -175,42 +180,47 @@ describe('bootstrap pipeline', () => {
     const [run] = readEventRuns(h.foundryVar);
     expect(run!.finished).toBe(true);
     const resources = run!.resources.map((event) => event.resource);
-    for (const expected of ['repo', 'project_v2', 'project_repo_link', 'label', 'collaborator', 'registry', 'file', 'branch', 'ruleset']) {
-      expect(resources).toContain(expected);
-    }
-    // artifact set exactly: zero issues, zero webhooks, zero custom fields
-    expect(h.api.calls.filter((c) => /^createHook|^createIssue|^createSingleSelectField/.test(c))).toEqual([]);
-    // the register stage wrote the one project row
-    expect(outcome.registry?.project).toBe('created');
-    const projectRow = await h.registryDb.query(`SELECT id, name FROM project WHERE project = 'throwaway'`);
-    expect(projectRow.rows).toHaveLength(1);
-    expect(projectRow.rows[0].name).toBe('Throwaway Project');
-    const routeRows = await h.registryDb.query(`SELECT count(*)::int AS n FROM route`);
-    expect(Number(routeRows.rows[0].n)).toBe(0);
+    expect([...new Set(resources)].sort()).toEqual(['branch', 'collaborator', 'file', 'label', 'registry', 'repo', 'ruleset']);
+    // artifact set exactly: zero boards, zero issues, zero webhooks
+    expect(h.api.calls.filter((c) => /Board|Hook|Issue|Project/i.test(c))).toEqual([]);
+    // the registry entry
+    expect(outcome.registry).toEqual({ path: registryPath(h.foundryVar), outcome: 'created' });
+    const entry = readRegistry(h.foundryVar).projects['throwaway']!;
+    expect(entry).toMatchObject({
+      name: 'Throwaway Project',
+      owner: 'owner-login',
+      repository: 'https://github.com/owner-login/throwaway',
+      visibility: 'private',
+      ruleset: 'standard',
+      owner_plan: 'pro',
+      path: join(h.storage, 'throwaway')
+    });
+    expect(entry.founded_at).toBe(entry.updated_at);
     // one grant: the work account
     const collaborators = run!.resources.filter((event) => event.resource === 'collaborator');
-    expect(collaborators.map((event) => event.github_login)).toEqual(['psyphix-claw']);
+    expect(collaborators.map((event) => event.github_login)).toEqual(['work-login']);
     // empty remote: the unborn branch pinned to main before the scaffold commit
     const mainDir = join(h.storage, 'throwaway', 'main');
     expect(h.git.ops).toContain(`setUnbornBranch(${mainDir}, main)`);
     // main/ committed as the owner, then handed to the work identity
     const identityOps = h.git.ops.filter((op) => op.startsWith(`setIdentity(${mainDir},`));
     expect(identityOps).toEqual([
-      `setIdentity(${mainDir}, jasonyliu, jasonyliu@throwaway.localhost)`,
-      `setIdentity(${mainDir}, psyphix-claw, psyphix-claw@throwaway.localhost)`
+      `setIdentity(${mainDir}, owner-login, owner-login@throwaway.localhost)`,
+      `setIdentity(${mainDir}, work-login, work-login@throwaway.localhost)`
     ]);
     // the empty team/ directory, and it alone
     expect(existsSync(join(h.storage, 'throwaway', 'team'))).toBe(true);
     expect(readdirSync(join(h.storage, 'throwaway', 'team'))).toEqual([]);
-    // skeleton rendered into main/
+    // skeleton rendered into main/, templates from the kit's home
     expect(existsSync(join(mainDir, 'docs', 'charter.md'))).toBe(true);
     expect(existsSync(join(mainDir, 'docs', 'backlog.md'))).toBe(true);
+    expect(readdirSync(join(mainDir, 'docs', 'conventions', 'templates'))).toHaveLength(11);
     // scaffold message per spec
     expect(h.git.ops.some((op) => op.includes('Foundry: initial project scaffold'))).toBe(true);
   });
 
   it('writes zero secret values into the event trail', async () => {
-    const h = await harness();
+    const h = harness();
     const outcome = await runBootstrapPipeline(h.options, h.deps);
     const raw = readFileSync(outcome.eventsPath!, 'utf8');
     for (const secret of ['owner-token-value', 'work-token-value']) {
@@ -219,21 +229,17 @@ describe('bootstrap pipeline', () => {
   });
 
   it('leaves a failure-marked event trail on mid-pipeline failure (exit 4) and resumes on re-run', async () => {
-    const h = await harness();
-    h.api.failOn.add('linkBoardToRepo');
+    const h = harness();
+    h.api.failOn.add('createLabel');
 
-    let caught: FoundryError | null = null;
-    try {
-      await runBootstrapPipeline(h.options, h.deps);
-    } catch (error) {
-      caught = error as FoundryError;
-    }
+    const caught = await expectFailure(h);
     expect(caught).toBeInstanceOf(FoundryError);
-    expect(caught!.exitCode).toBe(EXIT.GITHUB);
+    expect(caught.exitCode).toBe(EXIT.GITHUB);
     const partials = readEventRuns(h.foundryVar);
     expect(partials.length).toBe(1);
     expect(partials[0]!.finished).toBe(false);
     expect(partials[0]!.failed).toBe(true);
+    expect(existsSync(registryPath(h.foundryVar))).toBe(false);
 
     h.api.failOn.clear();
     const outcome = await runBootstrapPipeline(h.options, h.deps);
@@ -244,60 +250,98 @@ describe('bootstrap pipeline', () => {
     const repoEvent = final.resources.find((event) => event.resource === 'repo')!;
     expect(repoEvent.created_or_skipped).toBe('skipped');
     expect(h.api.calls.filter((call) => call.startsWith('createUserRepo')).length).toBe(1);
-    expect(outcome.registry?.project).toBe('created');
-    const projectRows = await h.registryDb.query(`SELECT id FROM project WHERE project = 'throwaway'`);
-    expect(projectRows.rows).toHaveLength(1);
+    expect(outcome.registry?.outcome).toBe('created');
   });
 
-  it('dry-run performs zero GitHub mutations, zero registry writes, and zero writes under the storage path', async () => {
-    const h = await harness();
+  it('a re-run after success updates the registry entry and keeps founded_at', async () => {
+    const h = harness();
+    await runBootstrapPipeline(h.options, h.deps);
+    const first = readRegistry(h.foundryVar).projects['throwaway']!;
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const outcome = await runBootstrapPipeline(h.options, h.deps);
+    expect(outcome.registry?.outcome).toBe('updated');
+    const registry = readRegistry(h.foundryVar);
+    expect(Object.keys(registry.projects)).toEqual(['throwaway']);
+    expect(registry.projects['throwaway']!.founded_at).toBe(first.founded_at);
+    expect(registry.projects['throwaway']!.run_id).not.toBe(first.run_id);
+  });
+
+  it('dry-run performs zero GitHub mutations, zero writes under the storage path, and leaves the registry untouched', async () => {
+    const h = harness();
     const outcome = await runBootstrapPipeline({ ...h.options, dryRun: true }, h.deps);
     expect(outcome.exitCode).toBe(EXIT.SUCCESS);
-    const projects = await h.registryDb.query(`SELECT count(*)::int AS n FROM project`);
-    expect(Number(projects.rows[0].n)).toBe(0);
     const mutations = h.api.calls.filter((call) =>
-      /^create|^inviteCollaborator|^acceptInvitation|^grantBoard|^updateRuleset|^patchRepo|^linkBoard/.test(call)
+      /^create|^inviteCollaborator|^acceptInvitation|^updateRuleset|^patchRepo/.test(call)
     );
     expect(mutations).toEqual([]);
     expect(existsSync(join(h.storage, 'throwaway'))).toBe(false);
     expect(existsSync(join(h.foundryVar, 'dry-run'))).toBe(true);
+    expect(existsSync(registryPath(h.foundryVar))).toBe(false);
   });
 
   it('preflight failures exit 3 naming the subject, before any mutation', async () => {
-    const h = await harness();
+    const h = harness();
     rmSync(h.options.env.work_token_path);
-    let caught: FoundryError | null = null;
-    try {
-      await runBootstrapPipeline(h.options, h.deps);
-    } catch (error) {
-      caught = error as FoundryError;
-    }
-    expect(caught!.exitCode).toBe(EXIT.PREFLIGHT);
-    expect(caught!.message).toMatch(/token file not found/);
+    const caught = await expectFailure(h);
+    expect(caught.exitCode).toBe(EXIT.PREFLIGHT);
+    expect(caught.message).toMatch(/token file not found/);
     expect(h.api.calls.filter((call) => /^create/.test(call))).toEqual([]);
     expect(readEventRuns(h.foundryVar)).toEqual([]);
   });
 
-  it('runs standalone — registry skipped with an event — when the environment carries zero database config', async () => {
-    const h = await harness();
-    const { database: _omit, ...envWithoutDb } = h.options.env;
-    const outcome = await runBootstrapPipeline({ ...h.options, env: envWithoutDb }, h.deps);
-    expect(outcome.exitCode).toBe(EXIT.SUCCESS);
-    expect(outcome.registry).toBeUndefined();
-    const [run] = readEventRuns(h.foundryVar);
-    const registry = run!.resources.find((event) => event.resource === 'registry')!;
-    expect(registry.project).toBe('skipped');
-    expect(registry.skipped_reason).toMatch(/standalone/);
-    const projects = await h.registryDb.query(`SELECT count(*)::int AS n FROM project`);
-    expect(Number(projects.rows[0].n)).toBe(0);
+  describe('plan gate', () => {
+    it('refuses free + private + standard before any API call', async () => {
+      const h = harness('free');
+      const caught = await expectFailure(h);
+      expect(caught.exitCode).toBe(EXIT.PREFLIGHT);
+      expect(caught.message).toMatch(/free plan takes no branch protection/);
+      expect(h.api.calls).toEqual([]);
+      expect(readEventRuns(h.foundryVar)).toEqual([]);
+    });
+
+    it('passes free + public + standard, and free + private + none', async () => {
+      const pub = harness('free');
+      const publicOutcome = await runBootstrapPipeline({ ...pub.options, bundle: { ...pub.options.bundle, visibility: 'public' } }, pub.deps);
+      expect(publicOutcome.exitCode).toBe(EXIT.SUCCESS);
+      expect(pub.api.createdVisibility.get('throwaway')).toBe('public');
+      expect(readRegistry(pub.foundryVar).projects['throwaway']).toMatchObject({ visibility: 'public', owner_plan: 'free' });
+
+      const none = harness('free');
+      const noneOutcome = await runBootstrapPipeline({ ...none.options, env: { ...none.options.env, ruleset: 'none' } }, none.deps);
+      expect(noneOutcome.exitCode).toBe(EXIT.SUCCESS);
+      expect(none.api.rulesets).toEqual([]);
+      expect(readRegistry(none.foundryVar).projects['throwaway']).toMatchObject({ ruleset: 'none', owner_plan: 'free' });
+    });
+
+    it('passes an unknown plan and records it; a ruleset refusal is then named with its ways out', async () => {
+      const h = harness(null);
+      const outcome = await runBootstrapPipeline(h.options, h.deps);
+      expect(outcome.exitCode).toBe(EXIT.SUCCESS);
+      expect(readRegistry(h.foundryVar).projects['throwaway']!.owner_plan).toBe('unknown');
+
+      const refused = harness(null);
+      refused.api.failOn.add('createRuleset');
+      const caught = await expectFailure(refused);
+      expect(caught.exitCode).toBe(EXIT.GITHUB);
+      expect(caught.message).toMatch(/rulesets failed/);
+      expect(caught.message).toMatch(/FOUNDRY_RULESET=none/);
+      expect(caught.message).toMatch(/re-run/);
+    });
+
+    it('passes every combination on a paid plan', async () => {
+      const h = harness('pro');
+      const outcome = await runBootstrapPipeline(h.options, h.deps);
+      expect(outcome.exitCode).toBe(EXIT.SUCCESS);
+      expect(h.api.rulesets.map((r) => r.name).sort()).toEqual(['protect-dev', 'protect-main']);
+    });
   });
 
   it('repairs a torn main/ clone left by an interrupted run — removed, re-cloned, recorded as drift', async () => {
-    const h = await harness();
+    const h = harness();
     const mainDir = join(h.storage, 'throwaway', 'main');
     mkdirSync(join(mainDir, '.git'), { recursive: true });
     writeFileSync(join(mainDir, 'leftover.txt'), 'half-written', 'utf8');
-    h.git.cloned.set(mainDir, 'https://github.com/jasonyliu/throwaway.git');
+    h.git.cloned.set(mainDir, 'https://github.com/owner-login/throwaway.git');
     h.git.torn.add(mainDir);
     h.api.refs.set('heads/main', 'sha_prior');
     const outcome = await runBootstrapPipeline(h.options, h.deps);
@@ -310,24 +354,19 @@ describe('bootstrap pipeline', () => {
   });
 
   it('keeps a file path in the clear — sanitization matches secret segments rather than substrings', async () => {
-    const h = await harness();
+    const h = harness();
     const outcome = await runBootstrapPipeline(h.options, h.deps);
     const raw = readFileSync(outcome.eventsPath!, 'utf8');
     expect(raw).toContain('"path":"docs/charter.md"');
   });
 
   it('aborts preflight when the project folder pre-exists with a foreign origin', async () => {
-    const h = await harness();
+    const h = harness();
     const mainDir = join(h.storage, 'throwaway', 'main');
     mkdirSync(mainDir, { recursive: true });
     h.git.cloned.set(mainDir, 'https://github.com/someone-else/other.git');
-    let caught: FoundryError | null = null;
-    try {
-      await runBootstrapPipeline(h.options, h.deps);
-    } catch (error) {
-      caught = error as FoundryError;
-    }
-    expect(caught!.exitCode).toBe(EXIT.PREFLIGHT);
-    expect(caught!.message).toMatch(/pre-exists but is not a prior run/);
+    const caught = await expectFailure(h);
+    expect(caught.exitCode).toBe(EXIT.PREFLIGHT);
+    expect(caught.message).toMatch(/pre-exists but is not a prior run/);
   });
 });

@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { lintSkeleton, renderSkeleton, writeSkeleton } from '../src/render.js';
-import { skeletonInventory } from '../src/skeleton.js';
+import { skeletonInventory, templatesSourceDir } from '../src/skeleton.js';
 import { substitute } from '../src/variables.js';
 import { fixtureValues } from './helpers.js';
 
@@ -34,17 +34,13 @@ describe('skeleton inventory', () => {
     expect(paths.every((p) => !p.includes('..'))).toBe(true);
   });
 
-  it('committed record templates byte-match the canonical set (drift alarm)', () => {
-    const canonicalDir = join(import.meta.dirname, '..', '..', '..', 'docs', 'conventions', 'templates');
-    const committedDir = join(import.meta.dirname, '..', 'assets', 'skeleton', 'docs', 'conventions', 'templates');
-    const canonical = readdirSync(canonicalDir).filter((name) => name.endsWith('.md')).sort();
-    const committed = readdirSync(committedDir).filter((name) => name.endsWith('.md')).sort();
-    expect(committed).toEqual(canonical);
-    for (const name of canonical) {
-      expect(readFileSync(join(committedDir, name), 'utf8'), `template drift: ${name}`).toBe(
-        readFileSync(join(canonicalDir, name), 'utf8')
-      );
-    }
+  it('takes the verbatim set from the kit\'s one template home, the Vork clone\'s docs/conventions/templates/', () => {
+    const home = templatesSourceDir();
+    expect(home.endsWith(join('docs', 'conventions', 'templates'))).toBe(true);
+    const inHome = readdirSync(home).filter((name) => name.endsWith('.md')).sort();
+    const verbatim = skeletonInventory().filter((entry) => entry.mode === 'verbatim').map((entry) => entry.path.split('/').pop()!);
+    expect(verbatim).toEqual(inHome);
+    expect(inHome).toHaveLength(11);
   });
 });
 
@@ -80,7 +76,7 @@ describe('render', () => {
       expect(charter).toContain(section);
     }
     expect(charter).toContain('**Key:** `throwaway`');
-    expect(charter).toContain('| jasonyliu | Principal |');
+    expect(charter).toContain('| owner-login | Principal |');
     // guidance comments deleted at instantiation
     expect(charter).not.toContain('<!--');
     expect(charter).not.toContain('{{');

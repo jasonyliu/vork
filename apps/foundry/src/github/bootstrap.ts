@@ -1,34 +1,25 @@
 import { labelInventory, rulesetPayloads } from '../artifacts.js';
 import { githubError, preflightError } from '../errors.js';
-import type {
-  BranchRecord,
-  CollaboratorRecord,
-  LabelRecord,
-  ProjectRepoLinkRecord,
-  ProjectV2Record,
-  RepoRecord,
-  ResourceRecord,
-  RulesetRecord
-} from '../events.js';
-import type { BoardInfo, GitHubApi, RepoInfo } from './api.js';
+import type { BranchRecord, CollaboratorRecord, LabelRecord, RepoRecord, ResourceRecord, RulesetRecord } from '../events.js';
+import type { Visibility } from '../types.js';
+import type { GitHubApi, RepoInfo } from './api.js';
 
 // The GitHub bootstrap sub-steps, in pipeline order (`spec_foundry.md §GitHub
-// bootstrap`): repo, board, link, labels, grants — each idempotent per the
-// resume table, each streaming its resource event. Rulesets and the `dev`
-// branch live here too; the pipeline invokes them at their later stage.
+// bootstrap`): repo, labels, grant — each idempotent per the resume table, each
+// streaming its resource event. Rulesets and the `dev` branch live here too;
+// the pipeline invokes them at their later stage.
 
 export interface BootstrapContext {
   api: GitHubApi;
   ownerLogin: string;
   projectKey: string;
-  projectName: string;
-  workLogin: string; // the shared work account — the one grant
+  visibility: Visibility;
+  workLogin: string; // the work account — the one grant
 }
 
 export interface GitHubBootstrapResult {
   records: ResourceRecord[];
   repo: RepoInfo;
-  board: BoardInfo;
 }
 
 export async function ensureRepo(ctx: BootstrapContext): Promise<{ record: RepoRecord; repo: RepoInfo }> {
@@ -38,41 +29,16 @@ export async function ensureRepo(ctx: BootstrapContext): Promise<{ record: RepoR
       throw preflightError(`repo ${ctx.projectKey} exists under foreign owner ${existing.ownerLogin}`);
     }
     return {
-      record: { resource: 'repo', name: ctx.projectKey, node_id: existing.nodeId, created_or_skipped: 'skipped', settings_applied: false },
+      record: { resource: 'repo', name: ctx.projectKey, node_id: existing.nodeId, visibility: ctx.visibility, created_or_skipped: 'skipped', settings_applied: false },
       repo: existing
     };
   }
-  const repo = await ctx.api.createUserRepo(ctx.projectKey);
+  const repo = await ctx.api.createUserRepo(ctx.projectKey, ctx.visibility);
   await ctx.api.patchRepoSettings(ctx.ownerLogin, ctx.projectKey);
   return {
-    record: { resource: 'repo', name: ctx.projectKey, node_id: repo.nodeId, created_or_skipped: 'created', settings_applied: true },
+    record: { resource: 'repo', name: ctx.projectKey, node_id: repo.nodeId, visibility: ctx.visibility, created_or_skipped: 'created', settings_applied: true },
     repo
   };
-}
-
-export async function ensureBoard(
-  ctx: BootstrapContext,
-  ownerNodeId: string
-): Promise<{ record: ProjectV2Record; board: BoardInfo }> {
-  const matches = await ctx.api.findBoardsByTitle(ctx.ownerLogin, ctx.projectName);
-  if (matches.length > 1) {
-    throw preflightError(`board title "${ctx.projectName}" matches ${matches.length} existing boards`);
-  }
-  if (matches.length === 1) {
-    const board = matches[0]!;
-    return { record: { resource: 'project_v2', title: ctx.projectName, node_id: board.id, created_or_skipped: 'skipped' }, board };
-  }
-  const board = await ctx.api.createBoard(ownerNodeId, ctx.projectName);
-  return { record: { resource: 'project_v2', title: ctx.projectName, node_id: board.id, created_or_skipped: 'created' }, board };
-}
-
-export async function linkBoard(
-  ctx: BootstrapContext,
-  projectId: string,
-  repoNodeId: string
-): Promise<ProjectRepoLinkRecord> {
-  await ctx.api.linkBoardToRepo(projectId, repoNodeId); // idempotent
-  return { resource: 'project_repo_link', project_node_id: projectId, repo_node_id: repoNodeId };
 }
 
 // Upsert by name; an existing different color is recorded as drift and the live
@@ -94,11 +60,10 @@ export async function ensureLabels(ctx: BootstrapContext): Promise<LabelRecord[]
   return records;
 }
 
-// The work-account grant, on both surfaces — repo (invite `push`, accepted
-// in-run with the work token) and board (`WRITER`, an upsert applied every
-// run). A failure records `failed` and continues — grants leave the bootstrap
-// running.
-export async function ensureGrants(ctx: BootstrapContext, projectId: string): Promise<CollaboratorRecord[]> {
+// The work-account grant on the repository: invite `push`, accepted in-run with
+// the work token. A failure records `failed` and continues — the grant leaves
+// the bootstrap running.
+export async function ensureGrants(ctx: BootstrapContext): Promise<CollaboratorRecord[]> {
   const login = ctx.workLogin;
   let repoStatus: CollaboratorRecord['repo_invite_status'] = 'failed';
   let invitationId: number | undefined;
@@ -122,19 +87,10 @@ export async function ensureGrants(ctx: BootstrapContext, projectId: string): Pr
   } catch (caught) {
     error = caught instanceof Error ? caught.message : String(caught);
   }
-  let projectStatus: CollaboratorRecord['project_grant_status'] = 'failed';
-  try {
-    const userNodeId = await ctx.api.userNodeId(login);
-    await ctx.api.grantBoardWriter(projectId, userNodeId);
-    projectStatus = 'granted';
-  } catch (caught) {
-    error = error ?? (caught instanceof Error ? caught.message : String(caught));
-  }
   return [{
     resource: 'collaborator',
     github_login: login,
     repo_invite_status: repoStatus,
-    project_grant_status: projectStatus,
     ...(invitationId !== undefined ? { invitation_id: invitationId } : {}),
     ...(acceptedAt !== undefined ? { accepted_at: acceptedAt } : {}),
     ...(error !== undefined ? { error } : {})
@@ -204,12 +160,9 @@ export async function runGitHubBootstrap(ctx: BootstrapContext, sink: RecordSink
   try {
     const { record: repoRecord, repo } = await ensureRepo(ctx);
     keep(repoRecord);
-    const { record: boardRecord, board } = await ensureBoard(ctx, repo.ownerNodeId);
-    keep(boardRecord);
-    keep(await linkBoard(ctx, board.id, repo.nodeId));
     keep(...(await ensureLabels(ctx)));
-    keep(...(await ensureGrants(ctx, board.id)));
-    return { records: all, repo, board };
+    keep(...(await ensureGrants(ctx)));
+    return { records: all, repo };
   } catch (error) {
     if (error instanceof Error && error.name === 'FoundryError') throw error;
     throw githubError(error instanceof Error ? error.message : String(error));

@@ -8,16 +8,16 @@ import {
   runGitHubBootstrap,
   type BootstrapContext
 } from '../src/github/bootstrap.js';
-import type { CollaboratorRecord, LabelRecord, RulesetRecord } from '../src/events.js';
+import type { CollaboratorRecord, LabelRecord, RepoRecord, RulesetRecord } from '../src/events.js';
 import { FakeGitHubApi } from './fakes.js';
 
 function context(api: FakeGitHubApi, overrides: Partial<BootstrapContext> = {}): BootstrapContext {
   return {
     api,
-    ownerLogin: 'jasonyliu',
+    ownerLogin: 'owner-login',
     projectKey: 'throwaway',
-    projectName: 'Throwaway Project',
-    workLogin: 'psyphix-claw',
+    visibility: 'private',
+    workLogin: 'work-login',
     ...overrides
   };
 }
@@ -46,32 +46,36 @@ describe('committed artifact shapes', () => {
 });
 
 describe('runGitHubBootstrap on a fresh owner', () => {
-  it('produces exactly repo, board (default fields), link, defect label, work grant', async () => {
+  it('produces exactly repo, defect label, work grant', async () => {
     const api = new FakeGitHubApi();
     const result = await runGitHubBootstrap(context(api));
 
     expect(result.repo.name).toBe('throwaway');
-    expect(result.board.title).toBe('Throwaway Project');
+    expect(api.createdVisibility.get('throwaway')).toBe('private');
     expect(api.labels).toEqual([{ name: 'defect', color: 'e99695' }]);
+    const repoRecord = result.records.find((r): r is RepoRecord => r.resource === 'repo')!;
+    expect(repoRecord.visibility).toBe('private');
+    expect(repoRecord.created_or_skipped).toBe('created');
     const collaboratorRecords = result.records.filter((r): r is CollaboratorRecord => r.resource === 'collaborator');
-    expect(collaboratorRecords.map((r) => r.github_login)).toEqual(['psyphix-claw']);
+    expect(collaboratorRecords.map((r) => r.github_login)).toEqual(['work-login']);
     expect(collaboratorRecords[0]!.repo_invite_status).toBe('accepted');
-    expect(collaboratorRecords[0]!.project_grant_status).toBe('granted');
     expect(api.acceptedInvitations.length).toBe(1);
     const resources = result.records.map((r) => r.resource);
-    expect([...new Set(resources)].sort()).toEqual(['collaborator', 'label', 'project_repo_link', 'project_v2', 'repo']);
+    expect([...new Set(resources)].sort()).toEqual(['collaborator', 'label', 'repo']);
+    // zero board, zero webhook, zero issue
+    expect(api.calls.filter((c) => /Board|Hook|Issue|Project/i.test(c))).toEqual([]);
+  });
+
+  it('creates a public repository when the bundle says so', async () => {
+    const api = new FakeGitHubApi();
+    await runGitHubBootstrap(context(api, { visibility: 'public' }));
+    expect(api.createdVisibility.get('throwaway')).toBe('public');
   });
 
   it('aborts when the repo exists under a foreign owner', async () => {
     const api = new FakeGitHubApi();
-    api.repos.set('throwaway', { nodeId: 'R_x', ownerLogin: 'someone-else', ownerNodeId: 'U_x', name: 'throwaway' });
+    api.repos.set('throwaway', { nodeId: 'R_x', ownerLogin: 'someone-else', name: 'throwaway' });
     await expect(runGitHubBootstrap(context(api))).rejects.toThrow(/foreign owner someone-else/);
-  });
-
-  it('aborts when more than one board matches the title', async () => {
-    const api = new FakeGitHubApi();
-    api.boards.push({ id: 'PVT_a', title: 'Throwaway Project', number: 1 }, { id: 'PVT_b', title: 'Throwaway Project', number: 2 });
-    await expect(runGitHubBootstrap(context(api))).rejects.toThrow(/matches 2 existing boards/);
   });
 });
 
@@ -83,7 +87,7 @@ describe('idempotency and resume', () => {
     const second = await runGitHubBootstrap(context(api));
 
     const outcomes = second.records
-      .map((record) => Object.entries(record).find(([key]) => key.startsWith('created_or'))?.[1])
+      .map((record) => Object.entries(record).find(([key]) => key.startsWith('created_or') || key === 'repo_invite_status')?.[1])
       .filter((value): value is string => value !== undefined);
     expect(outcomes.every((value) => value === 'skipped' || value === 'already_collaborator')).toBe(true);
     const mutating = api.calls
@@ -128,8 +132,8 @@ describe('idempotency and resume', () => {
   });
 });
 
-describe('grants leave the bootstrap running', () => {
-  it('a failed invite records failed; the board grant is still attempted', async () => {
+describe('the grant leaves the bootstrap running', () => {
+  it('a failed invite records failed with its error', async () => {
     const api = new FakeGitHubApi();
     const failingApi = new Proxy(api, {
       get(target, prop, receiver) {
@@ -141,10 +145,9 @@ describe('grants leave the bootstrap running', () => {
         return Reflect.get(target, prop, receiver);
       }
     });
-    const records = await ensureGrants(context(failingApi as FakeGitHubApi), 'PVT_1');
+    const records = await ensureGrants(context(failingApi as FakeGitHubApi));
     expect(records.length).toBe(1);
     expect(records[0]!.repo_invite_status).toBe('failed');
     expect(records[0]!.error).toMatch(/invite exploded/);
-    expect(records[0]!.project_grant_status).toBe('granted');
   });
 });

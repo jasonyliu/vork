@@ -38,10 +38,10 @@ Two tokens, both file paths, the whole auth surface:
 
 | Token | Role |
 |---|---|
-| `FOUNDRY_OWNER_TOKEN_PATH` | the owner account's token: its authenticated login *is* the owner and its plan the plan gate reads; creates the repo, pushes the scaffold, applies rulesets, sends the invite. The owner is the Principal, who approves pull requests. |
+| `FOUNDRY_OWNER_TOKEN_PATH` | the owner account's token: its authenticated login *is* the owner; creates the repo, pushes the scaffold, applies rulesets, sends the invite. The owner is the Principal, who approves pull requests. `GET /user` carries the plan the gate reads only when the token holds `read:user` (classic); otherwise the plan is `unknown` and a refused ruleset is named at its own stage. |
 | `FOUNDRY_WORK_TOKEN_PATH` | the work account's token: accepts the invite, holds `main/`'s bound identity, and commits kickoff's lane. Every agent session commits and pushes as this account. |
 
-Two accounts, and the separation is the gate: an account cannot approve its own pull request, so `protect-main`'s one required review is satisfiable only by the owner reviewing the work account's lanes (`rules/PROJECT.md §Identity`). Each token is a file the operator creates and names; Foundry reads it by path and never from the environment's value. A classic token needs the `repo` scope; a fine-grained token needs repository administration, contents, issues and pull requests on the owner's repositories.
+Two accounts, and the separation is the gate: an account cannot approve its own pull request, so `protect-main`'s one required review is satisfiable only by the owner reviewing the work account's lanes (`rules/PROJECT.md §Identity`). Each token is a file the operator creates and names; Foundry reads it by path and never from the environment's value. A classic token needs the `repo` scope, and `read:user` for the plan gate to act before any mutation; a fine-grained token needs repository administration, contents, issues and pull requests on the owner's repositories.
 
 ## Input bundle
 
@@ -77,7 +77,7 @@ Plan matrix, enforced at preflight:
 | paid (`pro` and above) | any | any | proceeds |
 | `free` | `public` | `standard` or `none` | proceeds |
 | `free` | `private` | `none` | proceeds; the review gate holds by convention alone |
-| `free` | `private` | `standard` | exit 3 before any mutation |
+| `free` | `private` | `standard` | exit 3 before any mutation; with the plan `unknown`, the ruleset stage exits 4 naming the same two ways out, and a re-run with `none` resumes |
 
 ## Verification
 

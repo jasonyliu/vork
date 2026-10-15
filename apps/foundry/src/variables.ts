@@ -13,7 +13,6 @@ export const VARIABLE_NAMES = [
   'utc_now',
   'utc_now_compact',
   'run_id',
-  'project_node_id',
   'repo_node_id'
 ] as const;
 
@@ -36,7 +35,6 @@ export interface VariableValues {
   utc_now: string;
   utc_now_compact: string;
   run_id: string;
-  project_node_id?: string;
   repo_node_id?: string;
 }
 

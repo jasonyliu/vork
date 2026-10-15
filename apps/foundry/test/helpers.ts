@@ -7,7 +7,7 @@ export function fixtureValues(overrides: Partial<VariableValues> = {}): Variable
     mission: 'A one-paragraph mission for the throwaway project.',
     description: 'The goal the throwaway project exists to achieve.',
     scope: 'The current boundary of throwaway work.',
-    owner_login: 'jasonyliu',
+    owner_login: 'owner-login',
     utc_now: '2026-08-24T12:00:00Z',
     utc_now_compact: '20260824T120000Z',
     run_id: '00000000-0000-4000-8000-000000000000',

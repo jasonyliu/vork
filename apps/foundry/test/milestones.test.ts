@@ -1,15 +1,16 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { EXIT, FoundryError } from '../src/errors.js';
 import type { GitOps } from '../src/gitops.js';
 import { milestoneFolderName, openMilestoneRecord, renderMilestoneRecord } from '../src/milestones.js';
+import { templateSource } from '../src/skeleton.js';
 
-// Kickoff: the milestone record opened on a draft lane.
+// Kickoff: the milestone record opened on a draft lane, from the kit's one
+// template home.
 
-const TEMPLATE = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'assets', 'skeleton', 'docs', 'conventions', 'templates', 'milestone.md'), 'utf8');
+const TEMPLATE = templateSource('milestone.md');
 const DATE = new Date('2026-08-26T10:00:00Z');
 
 const tempDirs: string[] = [];
@@ -27,7 +28,7 @@ class RecordingGit implements GitOps {
   onRef = new Set<string>();
   clone(): void {}
   originUrl(): string | null { return null; }
-  commitAll(repoDir: string, message: string): string | null { this.ops.push(`commitAll(${message})`); return 'sha_ms'; }
+  commitAll(_repoDir: string, message: string): string | null { this.ops.push(`commitAll(${message})`); return 'sha_ms'; }
   push(_repoDir: string, branch: string): void { this.ops.push(`push(${branch})`); }
   setIdentity(): void {}
   probeRemote(): boolean { return true; }
@@ -39,8 +40,8 @@ class RecordingGit implements GitOps {
 }
 
 describe('milestone folder naming', () => {
-  it('is date-first per PROJECT.md §Milestones and rejects a malformed slug with exit 2', () => {
-    expect(milestoneFolderName(DATE, 'study-intake')).toBe('milestone_v2026.08.26_study-intake');
+  it('is date-first per the convention and rejects a malformed slug with exit 2', () => {
+    expect(milestoneFolderName(DATE, 'first-steps')).toBe('milestone_v2026.08.26_first-steps');
     try {
       milestoneFolderName(DATE, 'Bad_Slug');
       expect.unreachable();
@@ -52,10 +53,10 @@ describe('milestone folder naming', () => {
 
 describe('renderMilestoneRecord', () => {
   it('fills title, folder, status and date; seeds Scope with the note; leaves the other placeholders', () => {
-    const body = renderMilestoneRecord(TEMPLATE, { title: 'Study Intake', folder: 'milestone_v2026.08.26_study-intake', date: DATE, note: 'settled in topic 37 on 2026-08-26' });
-    expect(body).toContain('# Milestone: Study Intake (`milestone_v2026.08.26_study-intake`)');
+    const body = renderMilestoneRecord(TEMPLATE, { title: 'First Steps', folder: 'milestone_v2026.08.26_first-steps', date: DATE, note: 'settled in conversation on 2026-08-26' });
+    expect(body).toContain('# Milestone: First Steps (`milestone_v2026.08.26_first-steps`)');
     expect(body).toContain('**Status:** `Active (started 2026-08-26)`');
-    expect(body).toContain('## Scope\n\nsettled in topic 37 on 2026-08-26');
+    expect(body).toContain('## Scope\n\nsettled in conversation on 2026-08-26');
     expect(body).toContain('1. {concrete output expected from the milestone}');
     expect(body).toContain('### Trail');
   });

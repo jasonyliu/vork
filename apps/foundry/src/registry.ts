@@ -1,52 +1,92 @@
-import { readFileSync } from 'node:fs';
-import pg from 'pg';
-import { mintId, type Queryable } from '@psyphix/data';
-import { expandHome } from './config.js';
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { localError } from './errors.js';
-import type { DatabaseConfig } from './types.js';
+import type { Visibility } from './types.js';
 
-// Foundry's own DB layer — the register stage's runtime DML. A `project` row
-// IS the project's creation (specs/data/spec_database.md §11): one row,
-// idempotent, written as the `psyphix_app` seeding act. The project row
-// completes the stage.
+// The machine's project registry (`spec_foundry-data.md §Registry`):
+// `<foundry-var>/projects.json`, one entry per founded key, written whole and
+// atomically at each bootstrap's close, read by `foundry list`. The seed for
+// anything built on it later.
 
-export interface RegistryInput {
-  projectKey: string;
-  projectName: string;
+export interface RegistryEntry {
+  name: string;
+  owner: string;
+  repository: string;
+  visibility: Visibility;
+  ruleset: 'standard' | 'none';
+  owner_plan: string;
+  path: string;
+  founded_at: string;
+  updated_at: string;
+  run_id: string;
 }
+
+export interface Registry {
+  projects: Record<string, RegistryEntry>;
+}
+
+export type RegistryInput = Omit<RegistryEntry, 'founded_at' | 'updated_at'>;
 
 export interface RegistryOutcome {
-  project_id: string;
-  project: 'created' | 'existing';
+  path: string;
+  outcome: 'created' | 'updated';
 }
 
-export function openRegistryPool(config: DatabaseConfig): pg.Pool {
-  const password = readFileSync(expandHome(config.password_path), 'utf8').trim();
-  if (password === '') throw localError(`registry password file empty: ${config.password_path}`);
-  return new pg.Pool({
-    host: config.host,
-    port: config.port,
-    database: config.name,
-    user: config.user,
-    password
-  });
+export function registryPath(foundryVar: string): string {
+  return join(foundryVar, 'projects.json');
 }
 
-export async function pingRegistry(db: Queryable): Promise<void> {
-  await db.query('SELECT 1 FROM project LIMIT 1');
-}
-
-export async function registerProject(db: Queryable, input: RegistryInput): Promise<RegistryOutcome> {
-  const now = Date.now();
-  const existing = await db.query(`SELECT id FROM project WHERE project = $1 LIMIT 1`, [input.projectKey]);
-  if (existing.rows.length > 0) {
-    return { project_id: existing.rows[0].id as string, project: 'existing' };
+// An absent file is an empty registry; an unparseable one exits 5 naming it.
+export function readRegistry(foundryVar: string): Registry {
+  const path = registryPath(foundryVar);
+  if (!existsSync(path)) return { projects: {} };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(path, 'utf8'));
+  } catch (error) {
+    throw localError(`registry unparseable: ${path} (${error instanceof Error ? error.message : String(error)})`);
   }
-  const projectId = mintId('prj');
-  await db.query(
-    `INSERT INTO project (id, project, name, status, create_time, update_time)
-     VALUES ($1,$2,$3,'active',$4,$4)`,
-    [projectId, input.projectKey, input.projectName, now]
-  );
-  return { project_id: projectId, project: 'created' };
+  const projects = (parsed as { projects?: unknown } | null)?.projects;
+  if (projects === null || typeof projects !== 'object' || Array.isArray(projects)) {
+    throw localError(`registry malformed: ${path} carries no "projects" object`);
+  }
+  return { projects: projects as Record<string, RegistryEntry> };
+}
+
+function writeRegistry(foundryVar: string, registry: Registry): void {
+  const path = registryPath(foundryVar);
+  const sorted: Registry = { projects: {} };
+  for (const key of Object.keys(registry.projects).sort()) sorted.projects[key] = registry.projects[key]!;
+  mkdirSync(dirname(path), { recursive: true });
+  const temp = `${path}.tmp.${process.pid}`;
+  writeFileSync(temp, `${JSON.stringify(sorted, null, 2)}\n`, 'utf8');
+  renameSync(temp, path);
+}
+
+// Idempotency key: the project key. An existing entry is refreshed in every
+// field except `founded_at`.
+export function upsertProject(foundryVar: string, key: string, input: RegistryInput, now: string): RegistryOutcome {
+  const registry = readRegistry(foundryVar);
+  const existing = registry.projects[key];
+  registry.projects[key] = {
+    ...input,
+    founded_at: existing?.founded_at ?? now,
+    updated_at: now
+  };
+  writeRegistry(foundryVar, registry);
+  return { path: registryPath(foundryVar), outcome: existing === undefined ? 'created' : 'updated' };
+}
+
+// `foundry list`: one row per entry, in key order.
+export function formatRegistry(registry: Registry): string {
+  const keys = Object.keys(registry.projects).sort();
+  if (keys.length === 0) return 'no projects founded from this clone';
+  const rows = keys.map((key) => {
+    const entry = registry.projects[key]!;
+    return [key, entry.name, entry.visibility, entry.ruleset, entry.path, entry.founded_at.slice(0, 10)];
+  });
+  const header = ['key', 'name', 'visibility', 'ruleset', 'path', 'founded'];
+  const widths = header.map((h, i) => Math.max(h.length, ...rows.map((row) => row[i]!.length)));
+  const line = (cells: string[]) => cells.map((cell, i) => cell.padEnd(widths[i]!)).join('  ').trimEnd();
+  return [line(header), ...rows.map(line)].join('\n');
 }

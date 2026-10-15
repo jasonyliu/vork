@@ -21,19 +21,32 @@ export interface PreflightResult {
   ownerToken: string;
   ownerLogin: string;
   ownerNodeId: string;
-  work: ResolvedIdentity; // the shared work account
+  ownerPlan: string; // `plan.name`, or `unknown` when the token's scope withholds it
+  work: ResolvedIdentity; // the work account
   projectDir: string;
   repoPreExists: boolean;
 }
 
-const REQUIRED_CLASSIC_SCOPES = ['repo', 'project'];
+const REQUIRED_CLASSIC_SCOPES = ['repo'];
+
+export const PLAN_GATE_MESSAGE =
+  'a free plan takes no branch protection on a private repository: set visibility public, or FOUNDRY_RULESET=none';
 
 function verifyScopes(identity: TokenIdentity, subject: string): void {
-  if (identity.scopes === null) return; // fine-grained PAT — scopes stay unexposed
+  if (identity.scopes === null) return; // fine-grained token — scopes stay unexposed
   for (const scope of REQUIRED_CLASSIC_SCOPES) {
     if (!identity.scopes.includes(scope)) {
       throw preflightError(`${subject} missing required scope "${scope}" (has: ${identity.scopes.join(', ') || 'none'})`);
     }
+  }
+}
+
+// The plan matrix (`spec_foundry-interface.md §Environment`): one refused
+// combination, free + private + standard. An unknown plan passes; a ruleset the
+// plan refuses then fails at its own stage, named.
+export function planGate(plan: string, visibility: Bundle['visibility'], ruleset: FoundryEnv['ruleset']): void {
+  if (plan === 'free' && visibility === 'private' && ruleset === 'standard') {
+    throw preflightError(PLAN_GATE_MESSAGE);
   }
 }
 
@@ -43,15 +56,16 @@ export async function runPreflight(
   storagePath: string,
   deps: PreflightDeps
 ): Promise<PreflightResult> {
-  // owner PAT — its authenticated login is the owner
+  // owner token — its authenticated login is the owner
   const ownerToken = readToken(env.owner_token_path);
   const owner = await deps.authIdentity(ownerToken).catch((error: unknown) => {
     throw preflightError(`owner token failed to authenticate (${env.owner_token_path}): ${error instanceof Error ? error.message : String(error)}`);
   });
   verifyScopes(owner, 'owner token');
+  const ownerPlan = owner.plan ?? 'unknown';
+  planGate(ownerPlan, bundle.visibility, env.ruleset);
 
-  // work token — the shared work account: accepts the invite, receives the
-  // board grant, holds main/'s bound identity
+  // work token — the work account: accepts the invite, holds main/'s bound identity
   const workToken = readToken(env.work_token_path);
   const workIdentity = await deps.authIdentity(workToken).catch((error: unknown) => {
     throw preflightError(`work token failed to authenticate (${env.work_token_path}): ${error instanceof Error ? error.message : String(error)}`);
@@ -66,9 +80,6 @@ export async function runPreflight(
   if (existingRepo !== null && existingRepo.ownerLogin !== owner.login) {
     throw preflightError(`repo ${bundle.project_key} exists under foreign owner ${existingRepo.ownerLogin}`);
   }
-  // board collision: more than one existing title match → abort
-  const boards = await api.findBoardsByTitle(owner.login, bundle.project_name);
-  if (boards.length > 1) throw preflightError(`board title "${bundle.project_name}" matches ${boards.length} existing boards`);
 
   // storage path writable; <project_key>/ may pre-exist only as a prior run of
   // the same project — its main/ clone's git origin points at the owner's repo
@@ -90,7 +101,7 @@ export async function runPreflight(
     }
   }
 
-  // startup lint on the committed skeleton
+  // startup lint on the skeleton
   lintSkeleton();
 
   return {
@@ -98,6 +109,7 @@ export async function runPreflight(
     ownerToken,
     ownerLogin: owner.login,
     ownerNodeId: owner.nodeId,
+    ownerPlan,
     work,
     projectDir,
     repoPreExists: existingRepo !== null
