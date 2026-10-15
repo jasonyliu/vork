@@ -6,9 +6,9 @@
 
 {what this environment is and serves — its concrete instances: hosts, URLs, deploy targets, and the consumers that read from it (PROJECT.md §Environments)}
 
-## Chaining
+## When
 
-{where a Deployment Stage Task for this environment attaches — the stage-terminal or routed event that cues its creation (DELIVERY.md §Chaining), typically surrounding a stage task, before or after it — plus any expected on-direction invocations}
+{the moment this deployment is performed, and what cues it}
 
 ## Mechanism
 

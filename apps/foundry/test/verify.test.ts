@@ -16,16 +16,12 @@ afterEach(() => {
   while (tempDirs.length > 0) rmSync(tempDirs.pop()!, { recursive: true, force: true });
 });
 
-// the standing fixture: the platform's own tree must pass (`spec_foundry.md
-// §Verify`) — on a Foundry-founded tree. The published tree is an extraction,
-// not a founding, and carries no skeleton stubs, so the fixture is checked only
-// where the skeleton is present.
-const PLATFORM_TREE = join(import.meta.dirname, '..', '..', '..');
-const PLATFORM_TREE_HAS_SKELETON = existsSync(join(PLATFORM_TREE, 'docs', 'research', 'README.md'));
+// the standing fixture: the Vork clone's own tree passes (`spec_foundry.md §Verify`)
+const VORK_TREE = join(import.meta.dirname, '..', '..', '..');
 
 describe('verify --against', () => {
-  it.skipIf(!PLATFORM_TREE_HAS_SKELETON)('passes on the platform tree — the standing fixture', () => {
-    const result = verifyAgainst(PLATFORM_TREE);
+  it('passes on the Vork tree — the standing fixture', () => {
+    const result = verifyAgainst(VORK_TREE);
     expect(result.findings).toEqual([]);
     expect(result.clean).toBe(true);
   });
@@ -36,13 +32,13 @@ describe('verify --against', () => {
     expect(verifyAgainst(dir).clean).toBe(true);
   });
 
-  it('reports a deleted canonical README precisely, naming the path', () => {
+  it('reports a deleted canonical path precisely, naming it', () => {
     const dir = tempDir();
     writeSkeleton(renderSkeleton(fixtureValues()), dir);
-    unlinkSync(join(dir, 'docs', 'research', 'README.md'));
+    unlinkSync(join(dir, 'docs', 'backlog.md'));
     const result = verifyAgainst(dir);
     expect(result.clean).toBe(false);
-    expect(result.findings).toEqual([{ path: 'docs/research/README.md', problem: 'missing' }]);
+    expect(result.findings).toEqual([{ path: 'docs/backlog.md', problem: 'missing' }]);
   });
 
   it('reports record-template byte drift, naming the path', () => {

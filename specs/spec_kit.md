@@ -12,7 +12,7 @@ rules/PROJECT.md                   # the convention, canonical, no frontmatter
 skills/<name>/SKILL.md             # foundry, release, techspec (techspec with references/, evals/)
 apps/foundry/                      # the start acts (spec_foundry*.md); var/ and .env machine-local, gitignored
 provisions/install                 # the installer (§Install)
-provisions/<surface>/              # what a surface receives beyond the rule and skills (§Surfaces)
+provisions/codex/AGENTS.md         # what a surface receives beyond the rule and skills (§Surfaces); a folder per surface that needs one
 docs/charter.md  docs/backlog.md
 docs/conventions/templates/*.md    # the eleven record templates, the one home (spec_foundry-data.md §Skeleton inventory)
 docs/deployments/deploy_<surface>/<surface>.md   # one manual per surface: claude, codex
@@ -22,8 +22,8 @@ specs/spec_kit.md  specs/spec_foundry.md  specs/spec_foundry-interface.md  specs
 
 Identifiers:
 
-- `<surface>`: `claude` | `codex`; names the manual folder, the `provisions/<surface>/` folder and the installer's `--surface` value.
-- `<projects-root>`: the storage root, parent of every `<project_key>/` (`rules/PROJECT.md §Storage`); one value per machine, chosen at install, written into Foundry's environment and into the Claude rule's frontmatter.
+- `<surface>`: `claude` | `codex`; names the manual folder, the installer's `--surface` value, and the `provisions/<surface>/` folder where the surface needs more than the rule and skills.
+- `<projects-root>`: the storage root, parent of every `<project_key>/` (`rules/PROJECT.md §Storage`); one value per machine, chosen at install, written into Foundry's environment and into the Codex pointer block.
 - `<vork>`: the Vork clone the installer belongs to, resolved from the script's own location. The clone at a release tag is the deployed release; the installer is how it reaches a surface.
 - Managed-block markers: `<!-- vork:start v=<sha> source=<tag> deployed=<YYYY-MM-DD> -->` … `<!-- vork:end -->`. Content between the markers is the kit's; content outside is the operator's and is never touched.
 
@@ -33,22 +33,11 @@ What each surface reads, and so what the installer lands under `$HOME`:
 
 | Surface | Reads on its own | Landed by the installer |
 |---|---|---|
-| `claude` | `~/.claude/rules/*.md` (a rule with `paths:` frontmatter loads when a Read, Write or Edit touches a matching file; a rule without it loads at launch); `~/.claude/skills/<name>/SKILL.md` | `rules/PROJECT.md` → `~/.claude/rules/PROJECT.md` with the frontmatter `provisions/claude/frontmatter.md` prepended, `{{projects_root}}` rendered as the absolute root; `skills/**` → `~/.claude/skills/<name>/…` |
+| `claude` | `~/.claude/rules/*.md`, loaded at launch into every session (a rule with `paths:` frontmatter loads instead when a Read, Write or Edit touches a file matching the glob relative to the session's project directory, and never for a file outside it); `~/.claude/skills/<name>/SKILL.md` | `rules/PROJECT.md` → `~/.claude/rules/PROJECT.md` verbatim, no frontmatter, so the rule is present in every session whatever the root and the working directory; `skills/**` → `~/.claude/skills/<name>/…` |
 | `codex` | `~/.codex/AGENTS.md` at every session; `~/.codex/skills/<name>/SKILL.md`. Codex reads `~/.codex/rules/` for its own `.rules` execution policies; a markdown file there is inert until a session is told to read it by path | `rules/PROJECT.md` → `~/.codex/rules/PROJECT.md` verbatim; a managed pointer block in `~/.codex/AGENTS.md` from `provisions/codex/AGENTS.md` (§Pointer block); `skills/**` → `~/.codex/skills/<name>/…` |
 | operator | `README.md` | nothing; the README is the surface |
 
-A surface added later (an OpenClaw agent, another harness) is one row here, one `provisions/<surface>/` folder, one manual, one installer branch.
-
-### Frontmatter
-
-`provisions/claude/frontmatter.md`:
-
-```markdown
----
-paths:
-  - "{{projects_root}}/**"
----
-```
+A surface added later (an OpenClaw agent, another harness) is one row here, one manual, one installer branch, and a `provisions/<surface>/` folder when it needs more than the rule and skills.
 
 ### Pointer block
 
@@ -58,7 +47,7 @@ paths:
 Projects under `{{projects_root}}/` follow the Vork convention. When a session touches a file there, read `~/.codex/rules/PROJECT.md` first and work by it. The kit's skills are in `~/.codex/skills/`.
 ```
 
-`{{projects_root}}` is the one variable either surface file may carry; the installer refuses any other `{{name}}` (exit 2).
+`{{projects_root}}` is the one variable a surface file may carry; the installer refuses any other `{{name}}` (exit 2).
 
 ## Install
 
@@ -73,7 +62,7 @@ Acts, in order:
 1. **Root**: resolve `<projects-root>` (flag, else `~/Vork/projects`, the suggested default); expand `~` to an absolute path; `mkdir -p` it.
 2. **Foundry environment**: `<vork>/apps/foundry/.env` absent → copy `.env.example`; then set `FOUNDRY_PROJECT_STORAGE_PATH=<projects-root>` (replace the line, or append it). Token paths stay the operator's to fill; the installer reports each one that still reads the example's placeholder.
 3. **Foundry dependencies**: `<vork>/apps/foundry/node_modules/` absent → `npm ci` there; the report names it.
-4. **Rule**: render for the surface (frontmatter prepended for `claude`, verbatim for `codex`), compare, copy atomically (`.tmp.$$` then `mv`).
+4. **Rule**: `rules/PROJECT.md` verbatim to the surface's rules directory; compare, copy atomically (`.tmp.$$` then `mv`).
 5. **Skills**: for every file under `<vork>/skills/`, compare, copy to the surface's skills directory at the same relative path. Files the surface already holds under other skill names stand.
 6. **Pointer block** (`codex` alone): render; a block present with equal content → unchanged; present and different → replaced between its markers, the rest of the file byte-preserved; absent → appended after a blank line (file created when missing).
 
@@ -106,8 +95,8 @@ A stable command path is a symlink: `ln -s <vork>/apps/foundry/bin/foundry ~/.lo
 ## Verification
 
 - `foundry verify --against <vork clone>` exits 0 at every release.
-- `install --surface claude` on a scratch `HOME`: `.claude/rules/PROJECT.md` equals `rules/PROJECT.md` with the rendered frontmatter prepended; `.claude/skills/{foundry,release,techspec}/` byte-equal the kit's; `apps/foundry/.env` exists and carries the root; a second run prints `unchanged` for every path; `--check` exits 0; editing one landed file makes `--check` exit 1 naming it.
+- `install --surface claude` on a scratch `HOME`: `.claude/rules/PROJECT.md` byte-equals `rules/PROJECT.md`; `.claude/skills/{foundry,release,techspec}/` byte-equal the kit's; `apps/foundry/.env` exists and carries the root; a second run prints `unchanged` for every path; `--check` exits 0; editing one landed file makes `--check` exit 1 naming it.
 - `install --surface codex` on a scratch `HOME`: `.codex/rules/PROJECT.md` byte-equal; the pointer block present once in `.codex/AGENTS.md` with the root rendered; an existing `AGENTS.md` keeps every byte outside the markers; a second run leaves the file byte-identical; a changed block is replaced in place.
-- `--projects-root` given twice with different values: the second run rewrites the frontmatter, the pointer block and the `.env` line, and `--check` with the first value reports drift.
-- A Claude Code session that reads a file under `<projects-root>/` shows `PROJECT.md` loaded (`/context`); a session that reads a file elsewhere shows it absent.
+- `--projects-root` given twice with different values: the second run rewrites the pointer block and the `.env` line, and `--check` with the first value reports drift.
+- A Claude Code session opened anywhere on the machine after the install shows `PROJECT.md` loaded (`/context`).
 - Operator proof (milestone verification): a founding from a clean account pair on the README alone reaches the charter conversation; the consumer project re-points its own deployment to the tag.

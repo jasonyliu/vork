@@ -12,7 +12,7 @@ Rulings at Draft (2026-10-14): the database registry leaves Foundry whole and a 
 
 1. The tree per `specs/spec_kit.md §Layout`: `rules/PROJECT.md` rewritten to stand alone (the research's §Rule) with §GitHub naming the repository's issues as the fault queue, `skills/`, `docs/conventions/templates/` holding the eleven with the three residue-bearing templates rewritten to the current rule's vocabulary, the framework tree gone from `main`.
 2. `apps/foundry/` standalone per the three Foundry specs: database registry removed and the JSON registry with `foundry list` added, project board removed, `visibility` and the plan gate added, storage root required, templates read from the kit's one home, Vork's tree the verify fixture, fixtures generic, suite and typecheck green.
-3. `provisions/install` per `specs/spec_kit.md §Install`, with `provisions/{claude,codex}/`, and the two deployment manuals `docs/deployments/deploy_claude/` and `deploy_codex/`, each with the install command as its Mechanism.
+3. `provisions/install` per `specs/spec_kit.md §Install`, with `provisions/codex/`, and the two deployment manuals `docs/deployments/deploy_claude/` and `deploy_codex/`, each with the install command as its Mechanism.
 4. The three skills in `skills/`: techspec verbatim, release with its deployment steps generalised, foundry rewritten to the run surface.
 5. `README.md` with the kit as subject, leading with what an operator supplies, and the framework as history at its tag; `docs/releases/release_v<date>/agent-notes.md` with the placeholder legend; `CONTRIBUTING.md` revisited for a release that runs.
 6. The charter refreshed to what Vork now is; the release record; the tag; the repository public.
@@ -45,3 +45,5 @@ Rulings at Draft (2026-10-14): the database registry leaves Foundry whole and a 
 | `spec_foundry.md` | edited | board removed; plan gate in preflight; JSON registry stage; `foundry list` |
 | `spec_foundry-interface.md` | edited | `visibility` bundle field; plan matrix; `list` command; `project` scope dropped |
 | `spec_foundry-data.md` | edited | §Registry (`projects.json` shape); board artifacts and events gone; default labels named |
+| `spec_foundry-interface.md` | edited | plan read needs `read:user`; unknown-plan path through the ruleset stage stated in the matrix |
+| `spec_kit.md` | edited | Claude surface lands the rule verbatim, loaded at launch; the frontmatter mechanism dropped after the probe showed path-scoped rules are project-relative |

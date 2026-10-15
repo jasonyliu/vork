@@ -22,7 +22,7 @@
 
 - {the governing `spec_<slug>.md` files required to decompose and execute this milestone}
 
-### Spec trail
+### Trail
 
 <!-- Every spec this milestone creates or edits, appended as the change lands — the traceability record tying spec evolution to its milestone. One row per spec touched; note stays short (what changed, not how). -->
 

@@ -7,12 +7,6 @@
 - **Description:** {the goal the Project exists to achieve}
 - **Scope:** {the current boundary of work the Project includes}
 
-## Channel
-
-| Channel | Purpose |
-|---|---|
-| `{session key / board / group id}` | {the component or context it isolates} |
-
 ## Team
 
 | Member | Role | Responsibilities |

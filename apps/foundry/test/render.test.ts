@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { lintSkeleton, renderSkeleton, writeSkeleton } from '../src/render.js';
-import { skeletonInventory } from '../src/skeleton.js';
+import { skeletonInventory, templatesSourceDir } from '../src/skeleton.js';
 import { substitute } from '../src/variables.js';
 import { fixtureValues } from './helpers.js';
 
@@ -25,20 +25,8 @@ describe('skeleton inventory', () => {
     expect(paths).toContain('README.md');
     expect(paths).toContain('docs/charter.md');
     expect(paths).toContain('docs/backlog.md');
-    for (const stub of [
-      'docs/README.md',
-      'docs/research/README.md',
-      'docs/milestones/README.md',
-      'docs/deployments/README.md',
-      'docs/operations/README.md',
-      'docs/conventions/README.md',
-      'specs/README.md',
-      'apps/README.md',
-      'provisions/README.md',
-      'releases/README.md'
-    ]) {
-      expect(paths).toContain(stub);
-    }
+    // READMEs are on demand: the root README is the one the skeleton ships
+    expect(paths.filter((p) => p.endsWith('README.md'))).toEqual(['README.md', 'docs/conventions/templates/README.md']);
     // the canonical record-template set rides verbatim
     expect(paths).toContain('docs/conventions/templates/charter.md');
     expect(paths).toContain('docs/conventions/templates/milestone.md');
@@ -46,17 +34,13 @@ describe('skeleton inventory', () => {
     expect(paths.every((p) => !p.includes('..'))).toBe(true);
   });
 
-  it('committed record templates byte-match the canonical set (drift alarm)', () => {
-    const canonicalDir = join(import.meta.dirname, '..', '..', '..', 'docs', 'conventions', 'templates');
-    const committedDir = join(import.meta.dirname, '..', 'assets', 'skeleton', 'docs', 'conventions', 'templates');
-    const canonical = readdirSync(canonicalDir).filter((name) => name.endsWith('.md')).sort();
-    const committed = readdirSync(committedDir).filter((name) => name.endsWith('.md')).sort();
-    expect(committed).toEqual(canonical);
-    for (const name of canonical) {
-      expect(readFileSync(join(committedDir, name), 'utf8'), `template drift: ${name}`).toBe(
-        readFileSync(join(canonicalDir, name), 'utf8')
-      );
-    }
+  it('takes the verbatim set from the kit\'s one template home, the Vork clone\'s docs/conventions/templates/', () => {
+    const home = templatesSourceDir();
+    expect(home.endsWith(join('docs', 'conventions', 'templates'))).toBe(true);
+    const inHome = readdirSync(home).filter((name) => name.endsWith('.md')).sort();
+    const verbatim = skeletonInventory().filter((entry) => entry.mode === 'verbatim').map((entry) => entry.path.split('/').pop()!);
+    expect(verbatim).toEqual(inHome);
+    expect(inHome).toHaveLength(11);
   });
 });
 
@@ -88,16 +72,11 @@ describe('render', () => {
 
   it('instantiates the charter per the template section contract', () => {
     const charter = renderSkeleton(fixtureValues()).find((f) => f.path === 'docs/charter.md')!.content;
-    for (const section of ['## Mission', '## Channel', '## Team', '## Path', '## Products', '## Milestones', '## Provision']) {
+    for (const section of ['## Mission', '## Team', '## Path', '## Products', '## Milestones', '## Provision']) {
       expect(charter).toContain(section);
     }
     expect(charter).toContain('**Key:** `throwaway`');
-    expect(charter).toContain('`agent:main:throwaway`');
-    // crew rows carry their platform roles; specialist roles are left to Inception
-    expect(charter).toContain('| main | AI Lead | — |');
-    expect(charter).toContain('| heimdall | Auditor | — |');
-    expect(charter).toContain('| sarge | Project Manager | — |');
-    expect(charter).toContain('| visor | — | — |');
+    expect(charter).toContain('| owner-login | Principal |');
     // guidance comments deleted at instantiation
     expect(charter).not.toContain('<!--');
     expect(charter).not.toContain('{{');
