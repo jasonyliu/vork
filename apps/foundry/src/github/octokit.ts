@@ -1,6 +1,6 @@
 import { Octokit } from '@octokit/rest';
 import { graphql } from '@octokit/graphql';
-import type { GitHubApi, RepoInfo, BoardInfo, FieldInfo, LabelInfo, HookInfo, RulesetInfo, IssueInfo } from './api.js';
+import type { GitHubApi, RepoInfo, BoardInfo, LabelInfo, RulesetInfo } from './api.js';
 
 // GitHubApi over @octokit/rest + @octokit/graphql. The PAT-file model is the
 // single auth surface — ambient `gh` auth is never consulted. `acceptorTokens`
@@ -68,15 +68,7 @@ export function buildGitHubApi(options: OctokitApiOptions): GitHubApi {
   const gql: GraphqlClient = graphql.defaults({ headers: { authorization: `token ${options.mainToken}` } });
 
   return {
-    async viewerLogin() {
-      const { data } = await withRateLimitRetry(() => rest.users.getAuthenticated());
-      return data.login;
-    },
 
-    async viewerNodeId() {
-      const { data } = await withRateLimitRetry(() => rest.users.getAuthenticated());
-      return data.node_id;
-    },
 
     async userNodeId(login) {
       const { data } = await withRateLimitRetry(() => rest.users.getByUsername({ username: login }));
@@ -138,17 +130,6 @@ export function buildGitHubApi(options: OctokitApiOptions): GitHubApi {
       return response.user.projectsV2.nodes.filter((node) => node.title === title);
     },
 
-    async listRepoBoards(owner, repo): Promise<BoardInfo[]> {
-      const response = await withRateLimitRetry(() =>
-        gql<{ repository: { projectsV2: { nodes: { id: string; title: string; number: number }[] } } }>(
-          `query ($owner: String!, $repo: String!) {
-             repository(owner: $owner, name: $repo) { projectsV2(first: 5) { nodes { id title number } } }
-           }`,
-          { owner, repo }
-        )
-      );
-      return response.repository.projectsV2.nodes;
-    },
 
     async createBoard(ownerNodeId, title): Promise<BoardInfo> {
       const response = await withRateLimitRetry(() =>
@@ -162,76 +143,9 @@ export function buildGitHubApi(options: OctokitApiOptions): GitHubApi {
       return response.createProjectV2.projectV2;
     },
 
-    async listBoardFields(projectId): Promise<FieldInfo[]> {
-      const response = await withRateLimitRetry(() =>
-        gql<{
-          node: { fields: { nodes: ({ id: string; name: string; options?: { id: string; name: string; color?: string }[] } | null)[] } };
-        }>(
-          `query ($projectId: ID!) {
-             node(id: $projectId) {
-               ... on ProjectV2 {
-                 fields(first: 50) {
-                   nodes {
-                     ... on ProjectV2FieldCommon { id name }
-                     ... on ProjectV2SingleSelectField { id name options { id name color } }
-                   }
-                 }
-               }
-             }
-           }`,
-          { projectId }
-        )
-      );
-      return response.node.fields.nodes
-        .filter((node): node is { id: string; name: string; options?: { id: string; name: string; color?: string }[] } => node !== null && 'id' in node)
-        .map((node) => ({ id: node.id, name: node.name, options: node.options ?? [] }));
-    },
 
-    async createSingleSelectField(projectId, name, optionSpecs): Promise<FieldInfo> {
-      const response = await withRateLimitRetry(() =>
-        gql<{
-          createProjectV2Field: { projectV2Field: { id: string; name: string; options: { id: string; name: string }[] } };
-        }>(
-          `mutation ($projectId: ID!, $name: String!, $options: [ProjectV2SingleSelectFieldOptionInput!]!) {
-             createProjectV2Field(
-               input: { projectId: $projectId, dataType: SINGLE_SELECT, name: $name, singleSelectOptions: $options }
-             ) {
-               projectV2Field { ... on ProjectV2SingleSelectField { id name options { id name } } }
-             }
-           }`,
-          { projectId, name, options: optionSpecs.map((option) => ({ name: option.name, color: option.color, description: '' })) }
-        )
-      );
-      return response.createProjectV2Field.projectV2Field;
-    },
 
-    // GitHub seeds every new board with a default Status field (Todo / In
-    // Progress / Done); the canonical option set is converged onto it.
-    async updateSingleSelectFieldOptions(fieldId, optionSpecs): Promise<FieldInfo> {
-      const response = await withRateLimitRetry(() =>
-        gql<{
-          updateProjectV2Field: { projectV2Field: { id: string; name: string; options: { id: string; name: string }[] } };
-        }>(
-          `mutation ($fieldId: ID!, $options: [ProjectV2SingleSelectFieldOptionInput!]!) {
-             updateProjectV2Field(input: { fieldId: $fieldId, singleSelectOptions: $options }) {
-               projectV2Field { ... on ProjectV2SingleSelectField { id name options { id name color } } }
-             }
-           }`,
-          { fieldId, options: optionSpecs.map((option) => ({ name: option.name, color: option.color, description: '' })) }
-        )
-      );
-      return response.updateProjectV2Field.projectV2Field;
-    },
 
-    async countBoardItems(projectId): Promise<number> {
-      const response = await withRateLimitRetry(() =>
-        gql<{ node: { items: { totalCount: number } } }>(
-          `query ($projectId: ID!) { node(id: $projectId) { ... on ProjectV2 { items(first: 1) { totalCount } } } }`,
-          { projectId }
-        )
-      );
-      return response.node.items.totalCount;
-    },
 
     async linkBoardToRepo(projectId, repoNodeId) {
       await withRateLimitRetry(() =>
@@ -253,23 +167,7 @@ export function buildGitHubApi(options: OctokitApiOptions): GitHubApi {
       await withRateLimitRetry(() => rest.issues.createLabel({ owner, repo, name, color }));
     },
 
-    async listHooks(owner, repo): Promise<HookInfo[]> {
-      const { data } = await withRateLimitRetry(() => rest.repos.listWebhooks({ owner, repo, per_page: 100 }));
-      return data.map((hook) => ({ id: hook.id, url: hook.config.url ?? '', events: hook.events, active: hook.active }));
-    },
 
-    async createHook(owner, repo, url, secret, events): Promise<HookInfo> {
-      const { data } = await withRateLimitRetry(() =>
-        rest.repos.createWebhook({
-          owner,
-          repo,
-          config: { url, content_type: 'json', secret },
-          events,
-          active: true
-        })
-      );
-      return { id: data.id, url: data.config.url ?? url, events: data.events, active: data.active };
-    },
 
     async isCollaborator(owner, repo, login): Promise<boolean> {
       try {
@@ -352,86 +250,13 @@ export function buildGitHubApi(options: OctokitApiOptions): GitHubApi {
       await withRateLimitRetry(() => rest.git.createRef({ owner, repo, ref, sha }));
     },
 
-    async findOpenIssueByTypeLabel(owner, repo, typeLabel): Promise<IssueInfo | null> {
-      const { data } = await withRateLimitRetry(() =>
-        rest.issues.listForRepo({ owner, repo, labels: typeLabel, state: 'open', per_page: 1 })
-      );
-      const issue = data.find((candidate) => !candidate.pull_request);
-      return issue ? { number: issue.number, nodeId: issue.node_id } : null;
-    },
 
-    async findClosedIssueByTypeLabel(owner, repo, typeLabel): Promise<IssueInfo | null> {
-      const { data } = await withRateLimitRetry(() =>
-        rest.issues.listForRepo({ owner, repo, labels: typeLabel, state: 'closed', per_page: 1 })
-      );
-      const issue = data.find((candidate) => !candidate.pull_request);
-      return issue ? { number: issue.number, nodeId: issue.node_id } : null;
-    },
 
-    async createIssue(owner, repo, title, body, labels, assignees): Promise<IssueInfo> {
-      const { data } = await withRateLimitRetry(() =>
-        rest.issues.create({ owner, repo, title, body, labels, ...(assignees && assignees.length > 0 ? { assignees } : {}) })
-      );
-      return { number: data.number, nodeId: data.node_id };
-    },
 
-    async createIssueComment(owner, repo, issueNumber, body) {
-      await withRateLimitRetry(() => rest.issues.createComment({ owner, repo, issue_number: issueNumber, body }));
-    },
 
-    async listIssueComments(owner, repo, issueNumber): Promise<string[]> {
-      const comments = await withRateLimitRetry(() => rest.paginate(rest.issues.listComments, { owner, repo, issue_number: issueNumber, per_page: 100 }));
-      return comments.map((comment) => comment.body ?? '');
-    },
 
-    async linkedBranchNames(issueNodeId): Promise<string[]> {
-      const response = await withRateLimitRetry(() =>
-        gql<{ node: { linkedBranches: { nodes: { ref: { name: string } | null }[] } } }>(
-          `query ($issueId: ID!) { node(id: $issueId) { ... on Issue { linkedBranches(first: 20) { nodes { ref { name } } } } } }`,
-          { issueId: issueNodeId }
-        )
-      );
-      return response.node.linkedBranches.nodes.map((node) => node.ref?.name).filter((name): name is string => typeof name === 'string');
-    },
 
-    async addIssueToBoard(projectId, issueNodeId): Promise<string> {
-      const response = await withRateLimitRetry(() =>
-        gql<{ addProjectV2ItemById: { item: { id: string } } }>(
-          `mutation ($projectId: ID!, $contentId: ID!) {
-             addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) { item { id } }
-           }`,
-          { projectId, contentId: issueNodeId }
-        )
-      );
-      return response.addProjectV2ItemById.item.id;
-    },
 
-    async setBoardItemField(projectId, itemId, fieldId, optionId) {
-      await withRateLimitRetry(() =>
-        gql(
-          `mutation ($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
-             updateProjectV2ItemFieldValue(
-               input: { projectId: $projectId, itemId: $itemId, fieldId: $fieldId, value: { singleSelectOptionId: $optionId } }
-             ) { clientMutationId }
-           }`,
-          { projectId, itemId, fieldId, optionId }
-        )
-      );
-    },
 
-    // Branch↔Task binding from birth: create-and-link in one act — the one form
-    // the public API offers (`PROJECT.md §GitHub`).
-    async createLinkedBranch(repoNodeId, issueNodeId, branchName, oid) {
-      await withRateLimitRetry(() =>
-        gql(
-          `mutation ($issueId: ID!, $name: String!, $oid: GitObjectID!, $repositoryId: ID!) {
-             createLinkedBranch(input: { issueId: $issueId, name: $name, oid: $oid, repositoryId: $repositoryId }) {
-               clientMutationId
-             }
-           }`,
-          { issueId: issueNodeId, name: branchName, oid, repositoryId: repoNodeId }
-        )
-      );
-    }
   };
 }

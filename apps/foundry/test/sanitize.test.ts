@@ -15,6 +15,6 @@ describe('run-event sanitization', () => {
   it('project_key is a secret segment by the rule and stays redacted in run_started', () => {
     // `key` is a secret segment; the bundle's project_key is redacted in the
     // run_started payload — acceptable: the run file name already carries it.
-    expect(sanitize({ project_key: 'sample_project', path: 'docs/x.md', nested: { token_path: '/t' } })).toEqual({ project_key: '***', path: 'docs/x.md', nested: { token_path: '***' } });
+    expect(sanitize({ project_key: 'ascend', path: 'docs/x.md', nested: { token_path: '/t' } })).toEqual({ project_key: '***', path: 'docs/x.md', nested: { token_path: '***' } });
   });
 });

@@ -1,4 +1,3 @@
-import { CREW_ROLE_LABEL } from '@vork/data';
 import { localError } from './errors.js';
 
 // The closed template-variable set per `spec_foundry-data.md §Template variables`.
@@ -10,10 +9,7 @@ export const VARIABLE_NAMES = [
   'mission',
   'description',
   'scope',
-  'channel',
   'owner_login',
-  'team',
-  'team_resolved',
   'utc_now',
   'utc_now_compact',
   'run_id',
@@ -29,24 +25,14 @@ export function isVariableName(name: string): name is VariableName {
   return VARIABLE_NAME_SET.has(name);
 }
 
-export interface TeamMemberResolved {
-  name: string;
-  github_login: string;
-  github_node_id: string;
-}
-
-// The values a render draws from. Substitution is verbatim, no escaping; list
-// and object variables substitute through the string forms below.
+// The values a render draws from. Substitution is verbatim, no escaping.
 export interface VariableValues {
   project_name: string;
   project_key: string;
   mission: string;
   description: string;
   scope: string;
-  channel: string;
   owner_login: string;
-  team: string[];
-  team_resolved?: TeamMemberResolved[];
   utc_now: string;
   utc_now_compact: string;
   run_id: string;
@@ -54,21 +40,9 @@ export interface VariableValues {
   repo_node_id?: string;
 }
 
-// String form per variable. `team` renders as the charter team-table rows —
-// crew agents with their platform roles, specialists with Role left to
-// Inception; Responsibilities always Inception's. `team_resolved` renders as
-// JSON (run-event consumption).
 export function variableString(values: VariableValues, name: VariableName): string | undefined {
-  switch (name) {
-    case 'team':
-      return values.team.map((member) => `| ${member} | ${CREW_ROLE_LABEL[member] ?? '—'} | — |`).join('\n');
-    case 'team_resolved':
-      return values.team_resolved === undefined ? undefined : JSON.stringify(values.team_resolved);
-    default: {
-      const value = values[name];
-      return value === undefined || value === '' ? undefined : value;
-    }
-  }
+  const value = values[name];
+  return value === undefined || value === '' ? undefined : value;
 }
 
 export const VARIABLE_PATTERN = /\{\{([a-z_]+)\}\}/g;

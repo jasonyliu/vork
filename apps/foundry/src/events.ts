@@ -24,14 +24,6 @@ export interface ProjectV2Record {
   created_or_skipped: 'created' | 'skipped';
 }
 
-export interface ProjectFieldRecord {
-  resource: 'project_field';
-  name: string;
-  options: { name: string; id: string }[];
-  created_or_skipped: 'created' | 'converged' | 'skipped';
-  drift?: string;
-}
-
 export interface ProjectRepoLinkRecord {
   resource: 'project_repo_link';
   project_node_id: string;
@@ -46,16 +38,6 @@ export interface LabelRecord {
   drift?: string;
 }
 
-
-export interface WebhookRecord {
-  resource: 'webhook';
-  hook_id: number;
-  url: string;
-  events: string[];
-  active: boolean;
-  created_or_skipped: 'created' | 'skipped';
-  drift?: string;
-}
 
 export interface CollaboratorRecord {
   resource: 'collaborator';
@@ -73,18 +55,6 @@ export interface RulesetRecord {
   enforcement: string;
   rules_applied: string[];
   created_or_skipped: 'created' | 'converged' | 'skipped';
-  drift?: string;
-}
-
-export interface InceptionTaskRecord {
-  resource: 'inception_task';
-  issue_number: number | null;
-  node_id: string | null;
-  linked_branch: string | null;
-  created_or_skipped: 'created' | 'converged' | 'skipped';
-  assignee?: string;
-  creation_comment?: 'posted' | 'skipped';
-  skipped_reason?: string;
   drift?: string;
 }
 
@@ -113,25 +83,16 @@ export interface RegistryRecord {
   resource: 'registry';
   project_id: string | null;
   project: 'created' | 'existing' | 'skipped';
-  mapping?: 'created' | 'existing';
-  agents_created?: string[];
-  agents_existing?: string[];
-  routes_created?: number;
-  routes_existing?: number;
-  routes_drift?: { task_type: string | null; actor: string; agent_id: string }[];
   skipped_reason?: string;
 }
 
 export type ResourceRecord =
   | RepoRecord
   | ProjectV2Record
-  | ProjectFieldRecord
   | ProjectRepoLinkRecord
   | LabelRecord
-  | WebhookRecord
   | CollaboratorRecord
   | RulesetRecord
-  | InceptionTaskRecord
   | CloneRecord
   | FileRecord
   | BranchRecord
@@ -167,7 +128,7 @@ export function sanitize(value: unknown): unknown {
 
 
 
-// One run's event log: `FOUNDRY_VAR/runs/PROJECT_KEY/run_TS_RUNID8.jsonl`
+// One run's event log: `<foundry-var>/runs/<project_key>/run_<ts>_<runid8>.jsonl`
 // — unique by construction, runs accumulate side by side per project. Every
 // payload passes sanitization; secrets never appear in any event.
 export class RunEventLog {

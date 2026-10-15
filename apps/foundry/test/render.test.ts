@@ -25,20 +25,8 @@ describe('skeleton inventory', () => {
     expect(paths).toContain('README.md');
     expect(paths).toContain('docs/charter.md');
     expect(paths).toContain('docs/backlog.md');
-    for (const stub of [
-      'docs/README.md',
-      'docs/research/README.md',
-      'docs/milestones/README.md',
-      'docs/deployments/README.md',
-      'docs/operations/README.md',
-      'docs/conventions/README.md',
-      'specs/README.md',
-      'apps/README.md',
-      'provisions/README.md',
-      'releases/README.md'
-    ]) {
-      expect(paths).toContain(stub);
-    }
+    // READMEs are on demand: the root README is the one the skeleton ships
+    expect(paths.filter((p) => p.endsWith('README.md'))).toEqual(['README.md', 'docs/conventions/templates/README.md']);
     // the canonical record-template set rides verbatim
     expect(paths).toContain('docs/conventions/templates/charter.md');
     expect(paths).toContain('docs/conventions/templates/milestone.md');
@@ -88,16 +76,11 @@ describe('render', () => {
 
   it('instantiates the charter per the template section contract', () => {
     const charter = renderSkeleton(fixtureValues()).find((f) => f.path === 'docs/charter.md')!.content;
-    for (const section of ['## Mission', '## Channel', '## Team', '## Path', '## Products', '## Milestones', '## Provision']) {
+    for (const section of ['## Mission', '## Team', '## Path', '## Products', '## Milestones', '## Provision']) {
       expect(charter).toContain(section);
     }
     expect(charter).toContain('**Key:** `throwaway`');
-    expect(charter).toContain('`agent:main:throwaway`');
-    // crew rows carry their platform roles; specialist roles are left to Inception
-    expect(charter).toContain('| main | AI Lead | — |');
-    expect(charter).toContain('| heimdall | Auditor | — |');
-    expect(charter).toContain('| sarge | Project Manager | — |');
-    expect(charter).toContain('| visor | — | — |');
+    expect(charter).toContain('| jasonyliu | Principal |');
     // guidance comments deleted at instantiation
     expect(charter).not.toContain('<!--');
     expect(charter).not.toContain('{{');

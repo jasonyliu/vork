@@ -9,25 +9,19 @@
 - **Description:** {{description}}
 - **Scope:** {{scope}}
 
-## Channel
-
-| Channel | Purpose |
-|---|---|
-| `{{channel}}` | Primary Project channel |
-
 ## Team
 
 | Member | Role | Responsibilities |
 |---|---|---|
-{{team}}
+| {{owner_login}} | Principal | Mission framing, preview and review, scope boundary |
 
 ## Path
 
 ```text
 <project-storage-path>/{{project_key}}/
-├── main/                # canonical project repo
-├── products/            # local-only outcome surface: deployments/, jobs/
-└── team/                # local-only per-actor clones
+├── main/                # the working clone
+├── products/            # local-only outcome surface
+└── team/                # per-agent clones, where concurrency arises
 ```
 
 ## Products
@@ -42,4 +36,4 @@
 
 ## Provision
 
-- Provisions follow project creation — recorded from Inception forward.
+- Provisions follow project creation — recorded as the project takes shape.

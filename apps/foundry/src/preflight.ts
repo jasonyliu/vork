@@ -1,15 +1,14 @@
-import { accessSync, constants, existsSync, readFileSync, statSync } from 'node:fs';
+import { accessSync, constants, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { CREW_AGENTS } from '@vork/data';
-import { agentTokenPath, expandHome, readToken } from './config.js';
+import { expandHome, readToken } from './config.js';
 import { preflightError } from './errors.js';
 import { lintSkeleton } from './render.js';
-import type { Bundle, FoundryEnv, ResolvedAgent } from './types.js';
+import type { Bundle, FoundryEnv, ResolvedIdentity } from './types.js';
 import type { GitHubApi } from './github/api.js';
 import type { TokenIdentity } from './github/octokit.js';
 
-// Preflight per `spec_foundry.md §Preflight`: no state mutates until every
-// check passes. Failures exit 3 naming the failing subject.
+// Preflight per `spec_foundry.md §Preflight`: every check passes before the
+// first mutation. Failures exit 3 naming the failing subject.
 
 export interface PreflightDeps {
   authIdentity(token: string): Promise<TokenIdentity>;
@@ -22,11 +21,7 @@ export interface PreflightResult {
   ownerToken: string;
   ownerLogin: string;
   ownerNodeId: string;
-  crew: ResolvedAgent[]; // main, heimdall, sarge — in that order
-  specialists: ResolvedAgent[]; // bundle order
-  agents: ResolvedAgent[]; // crew ∪ specialists
-  grantLogins: string[]; // deduped over crew ∪ specialists
-  readWebhookSecret: () => string;
+  work: ResolvedIdentity; // the shared work account
   projectDir: string;
   repoPreExists: boolean;
 }
@@ -34,7 +29,7 @@ export interface PreflightResult {
 const REQUIRED_CLASSIC_SCOPES = ['repo', 'project'];
 
 function verifyScopes(identity: TokenIdentity, subject: string): void {
-  if (identity.scopes === null) return; // fine-grained PAT — scopes not exposed
+  if (identity.scopes === null) return; // fine-grained PAT — scopes stay unexposed
   for (const scope of REQUIRED_CLASSIC_SCOPES) {
     if (!identity.scopes.includes(scope)) {
       throw preflightError(`${subject} missing required scope "${scope}" (has: ${identity.scopes.join(', ') || 'none'})`);
@@ -55,41 +50,14 @@ export async function runPreflight(
   });
   verifyScopes(owner, 'owner token');
 
-  // crew + specialists — every name resolves to <agent_token_dir>/<name>.token;
-  // the returned login is that agent's GitHub identity (work tokens share one
-  // account — logins dedupe)
-  const acceptorTokens = new Map<string, string>();
-  async function resolveAgent(kind: 'crew' | 'specialist', name: string): Promise<ResolvedAgent> {
-    const tokenPath = agentTokenPath(env, name);
-    if (!existsSync(tokenPath)) throw preflightError(`${kind} agent "${name}" has no token file at ${tokenPath}`);
-    const token = readToken(tokenPath);
-    const identity = await deps.authIdentity(token).catch((error: unknown) => {
-      throw preflightError(`${kind} agent "${name}" token failed to authenticate (${tokenPath}): ${error instanceof Error ? error.message : String(error)}`);
-    });
-    acceptorTokens.set(identity.login, token);
-    return { name, tokenPath, login: identity.login, nodeId: identity.nodeId };
-  }
-  const crew: ResolvedAgent[] = [];
-  for (const name of CREW_AGENTS) crew.push(await resolveAgent('crew', name));
-  const specialists: ResolvedAgent[] = [];
-  for (const specialist of bundle.specialists) specialists.push(await resolveAgent('specialist', specialist.name));
-  const agents = [...crew, ...specialists];
-  const grantLogins = [...new Set(agents.map((agent) => agent.login))];
-
-  // webhook target + secret
-  let webhookUrl: URL;
-  try {
-    webhookUrl = new URL(env.webhook_url);
-  } catch {
-    throw preflightError(`FOUNDRY_WEBHOOK_URL is not a valid URL: ${env.webhook_url}`);
-  }
-  if (webhookUrl.protocol !== 'https:') throw preflightError(`FOUNDRY_WEBHOOK_URL must be HTTPS: ${env.webhook_url}`);
-  const secretPath = expandHome(env.webhook_secret_path);
-  if (!existsSync(secretPath) || readFileSync(secretPath, 'utf8').trim() === '') {
-    throw preflightError(`webhook secret unreadable or empty: ${env.webhook_secret_path}`);
-  }
-  // read at use, never persisted
-  const readWebhookSecret = () => readFileSync(secretPath, 'utf8').trim();
+  // work token — the shared work account: accepts the invite, receives the
+  // board grant, holds main/'s bound identity
+  const workToken = readToken(env.work_token_path);
+  const workIdentity = await deps.authIdentity(workToken).catch((error: unknown) => {
+    throw preflightError(`work token failed to authenticate (${env.work_token_path}): ${error instanceof Error ? error.message : String(error)}`);
+  });
+  const work: ResolvedIdentity = { tokenPath: env.work_token_path, login: workIdentity.login, nodeId: workIdentity.nodeId };
+  const acceptorTokens = new Map<string, string>([[work.login, workToken]]);
 
   const api = deps.buildApi(ownerToken, acceptorTokens);
 
@@ -130,11 +98,7 @@ export async function runPreflight(
     ownerToken,
     ownerLogin: owner.login,
     ownerNodeId: owner.nodeId,
-    crew,
-    specialists,
-    agents,
-    grantLogins,
-    readWebhookSecret,
+    work,
     projectDir,
     repoPreExists: existingRepo !== null
   };
