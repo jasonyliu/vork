@@ -13,8 +13,6 @@
 |---|---|---|
 | {name} | {role} | {owned responsibilities} |
 
-<!-- List any missing durable agents that must be created before work proceeds. -->
-
 ## Path
 
 <!-- Refreshed at every Release (PROJECT.md §Releases, Pointers). -->
@@ -22,7 +20,7 @@
 ```text
 <project-storage-path>/<project-name>/
 ├── main/                # canonical project repo (clone of <remote>)
-├── products/            # local-only outcome surface: deployments/, jobs/
+├── products/            # local-only outcome surface
 └── team/                # local-only per-actor clones
 ```
 
