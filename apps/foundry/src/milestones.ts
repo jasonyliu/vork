@@ -1,13 +1,12 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { localError, usageError } from './errors.js';
 import type { GitOps } from './gitops.js';
 
-// Unconducted kickoff (`spec_foundry.md §Kickoff`): the milestone record is
-// opened directly for the Principal and the AI Lead to draft in conversation —
-// no Stage Task, no project-manager turn. In the project's main/ clone: lane
-// off origin/dev, milestone.md from the canonical template, index row,
-// committed as the AI Lead, pushed.
+// Kickoff (`spec_foundry.md §Kickoff`): the milestone record opened for the
+// Principal and the agent to settle in conversation. In the project's main/
+// clone: lane off origin/dev, milestone.md from the canonical template,
+// committed under the clone's bound identity (the Vork account's), pushed.
 
 export const MILESTONE_SLUG_PATTERN = /^[a-z][a-z0-9-]*$/;
 
@@ -32,19 +31,6 @@ export function renderMilestoneRecord(template: string, input: { title: string; 
   return body;
 }
 
-// The index row, in whichever shape the project's docs/milestones/README.md
-// carries: the table the platform project keeps, or the skeleton's Active/Past bullets.
-export function addIndexRow(readme: string, folder: string, title: string, day: string): string {
-  const tableHeader = '| Folder | Status | Summary |\n|---|---|---|\n';
-  if (readme.includes(tableHeader)) {
-    return readme.replace(tableHeader, `${tableHeader}| \`${folder}/\` | **Active (started ${day})** — Draft stage | ${title} |\n`);
-  }
-  if (readme.includes('- Active: (none)')) {
-    return readme.replace('- Active: (none)', `- Active: \`${folder}/\` — ${title} (started ${day})`);
-  }
-  return `${readme.trimEnd()}\n- \`${folder}/\` — ${title} (Active, started ${day})\n`;
-}
-
 export interface OpenMilestoneInput {
   mainDir: string; // <storage>/<project_key>/main
   folder: string; // milestone_v<date>_<slug>
@@ -52,7 +38,7 @@ export interface OpenMilestoneInput {
   date: Date;
   note?: string;
   template: string; // the canonical milestone template body
-  aiLeadToken: string; // fetch + push as the AI Lead
+  workToken: string; // fetch + push with the Vork account's token
 }
 
 export interface OpenMilestoneResult {
@@ -65,7 +51,7 @@ export function openMilestoneRecord(git: GitOps, input: OpenMilestoneInput): Ope
   const recordPath = `docs/milestones/${input.folder}/milestone.md`;
   const lane = `feature/${input.folder}/draft`;
   if (!existsSync(join(input.mainDir, '.git'))) throw localError(`main/ clone missing at ${input.mainDir} — bootstrap the project first`);
-  git.fetch(input.mainDir, input.aiLeadToken);
+  git.fetch(input.mainDir, input.workToken);
   if (git.pathExistsOnRef(input.mainDir, 'origin/dev', recordPath) || existsSync(join(input.mainDir, recordPath))) {
     return { lane, recordPath, existing: true };
   }
@@ -73,12 +59,8 @@ export function openMilestoneRecord(git: GitOps, input: OpenMilestoneInput): Ope
   const dir = join(input.mainDir, 'docs', 'milestones', input.folder);
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, 'milestone.md'), renderMilestoneRecord(input.template, input), 'utf8');
-  const readmePath = join(input.mainDir, 'docs', 'milestones', 'README.md');
-  const day = input.date.toISOString().slice(0, 10);
-  const readme = existsSync(readmePath) ? readFileSync(readmePath, 'utf8') : '# Milestones\n\n- Active: (none)\n- Past: (none)\n';
-  writeFileSync(readmePath, addIndexRow(readme, input.folder, input.title, day), 'utf8');
   const sha = git.commitAll(input.mainDir, `kickoff: open ${input.folder}`);
-  if (sha === null) throw localError(`nothing to commit for ${input.folder} — record already present`);
-  git.push(input.mainDir, lane, input.aiLeadToken);
+  if (sha === null) throw localError(`zero changes to commit for ${input.folder} — record already present`);
+  git.push(input.mainDir, lane, input.workToken);
   return { lane, recordPath, existing: false };
 }

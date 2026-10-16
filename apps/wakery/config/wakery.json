@@ -1,5 +1,0 @@
-{
-  "worker": {
-    "dispatchPollMs": 10000
-  }
-}

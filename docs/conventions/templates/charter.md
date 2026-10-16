@@ -7,19 +7,11 @@
 - **Description:** {the goal the Project exists to achieve}
 - **Scope:** {the current boundary of work the Project includes}
 
-## Channel
-
-| Channel | Purpose |
-|---|---|
-| `{session key / board / group id}` | {the component or context it isolates} |
-
 ## Team
 
 | Member | Role | Responsibilities |
 |---|---|---|
 | {name} | {role} | {owned responsibilities} |
-
-<!-- List any missing durable agents that must be created before work proceeds. -->
 
 ## Path
 
@@ -28,7 +20,7 @@
 ```text
 <project-storage-path>/<project-name>/
 ├── main/                # canonical project repo (clone of <remote>)
-├── products/            # local-only outcome surface: deployments/, jobs/
+├── products/            # local-only outcome surface
 └── team/                # local-only per-actor clones
 ```
 

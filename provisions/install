@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+# Vork installer — deploys the kit to a surface (specs/spec_kit.md §Install).
+#
+#   provisions/install --surface <claude|codex> [--projects-root <path>]
+#                      [--owner-token <path>] [--vork-token <path>] [--name <text>] [--email <text>]
+#                      [--check]
+#
+# Convergent and idempotent: every act makes destination equal source, decided
+# by content comparison; a managed block's stamp is testimony, never the verdict.
+# Writes named files and deletes nothing. Destinations resolve under $HOME.
+set -euo pipefail
+
+usage() {
+  echo "usage: provisions/install --surface <claude|codex> [--projects-root <path>] [--owner-token <path>] [--vork-token <path>] [--name <text>] [--email <text>] [--check]" >&2
+  exit 2
+}
+
+SURFACE=""; ROOT=""; OWNER_TOKEN=""; VORK_TOKEN=""; VORK_NAME=""; VORK_EMAIL=""; CHECK=0
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --surface) [ $# -ge 2 ] || usage; SURFACE="$2"; shift ;;
+    --projects-root) [ $# -ge 2 ] || usage; ROOT="$2"; shift ;;
+    --owner-token) [ $# -ge 2 ] || usage; OWNER_TOKEN="$2"; shift ;;
+    --vork-token) [ $# -ge 2 ] || usage; VORK_TOKEN="$2"; shift ;;
+    --name) [ $# -ge 2 ] || usage; VORK_NAME="$2"; shift ;;
+    --email) [ $# -ge 2 ] || usage; VORK_EMAIL="$2"; shift ;;
+    --check) CHECK=1 ;;
+    *) echo "install: unknown flag: $1" >&2; usage ;;
+  esac
+  shift
+done
+[ -n "$SURFACE" ] || usage
+
+# --- the clone this script belongs to -----------------------------------------
+SELF="${BASH_SOURCE[0]}"
+while [ -L "$SELF" ]; do
+  TARGET="$(readlink "$SELF")"
+  case "$TARGET" in /*) SELF="$TARGET" ;; *) SELF="$(cd "$(dirname "$SELF")" && pwd)/$TARGET" ;; esac
+done
+VORK="$(cd "$(dirname "$SELF")/.." && pwd)"
+[ -f "$VORK/rules/PROJECT.md" ] || { echo "install: $VORK is not a Vork clone (rules/PROJECT.md absent)" >&2; exit 2; }
+
+case "$SURFACE" in
+  claude) DEST="$HOME/.claude" ;;
+  codex) DEST="$HOME/.codex" ;;
+  *) echo "install: unknown surface: $SURFACE (claude | codex)" >&2; exit 2 ;;
+esac
+
+SHA=$(git -C "$VORK" rev-parse --short HEAD 2>/dev/null || echo unknown)
+TAG=$(git -C "$VORK" describe --tags --exact-match 2>/dev/null || echo untagged)
+DRIFT=0
+say() { printf '%-9s %s\n' "$1" "$2"; }
+fail_write() { echo "install: write failed: $1" >&2; exit 5; }
+
+expand_home() { case "$1" in "~") echo "$HOME" ;; "~/"*) echo "$HOME/${1#\~/}" ;; *) echo "$1" ;; esac; }
+
+# put <src-file> <dst-file>: compare, then atomic copy
+put() {
+  local src="$1" dst="$2"
+  if [ -f "$dst" ] && cmp -s "$src" "$dst"; then say unchanged "$dst"; return; fi
+  if [ $CHECK -eq 1 ]; then
+    if [ -f "$dst" ]; then say drifted "$dst"; else say missing "$dst"; fi
+    DRIFT=1; return
+  fi
+  mkdir -p "$(dirname "$dst")" || fail_write "$dst"
+  cp "$src" "$dst.tmp.$$" && mv "$dst.tmp.$$" "$dst" || fail_write "$dst"
+  say updated "$dst"
+}
+
+ENV_FILE="$VORK/apps/foundry/.env"
+ENV_EXAMPLE="$VORK/apps/foundry/.env.example"
+env_get() { awk -v k="$1" 'index($0, k "=") == 1 { print substr($0, length(k) + 2); exit }' "$ENV_FILE" 2>/dev/null; }
+
+# --- 1. root ------------------------------------------------------------------
+# the flag, else the root the environment already holds, else the suggested default
+if [ -z "$ROOT" ] && [ -f "$ENV_FILE" ]; then ROOT="$(env_get FOUNDRY_PROJECT_STORAGE_PATH)"; fi
+[ -n "$ROOT" ] || ROOT="~/Vork/projects"
+ROOT="$(expand_home "$ROOT")"
+if [ -d "$ROOT" ]; then
+  say unchanged "$ROOT (projects root)"
+elif [ $CHECK -eq 1 ]; then
+  say missing "$ROOT (projects root)"; DRIFT=1
+else
+  mkdir -p "$ROOT" || fail_write "$ROOT"
+  say created "$ROOT (projects root)"
+fi
+
+# --- 2. Foundry environment --------------------------------------------------
+
+# env_set <key> <value>: replace the key's line in $ENV_FILE, or append it
+env_set() {
+  local key="$1" value="$2" tmp="$ENV_FILE.tmp.$$"
+  awk -v k="$key" -v v="$value" '
+    index($0, k "=") == 1 { print k "=" v; done = 1; next }
+    { print }
+    END { if (!done) print k "=" v }' "$ENV_FILE" > "$tmp" && mv "$tmp" "$ENV_FILE" || fail_write "$ENV_FILE"
+}
+ENV_FIRST=0
+if [ ! -f "$ENV_FILE" ]; then
+  ENV_FIRST=1
+  if [ $CHECK -eq 1 ]; then
+    say missing "$ENV_FILE"; DRIFT=1
+  else
+    for pair in "--owner-token:$OWNER_TOKEN" "--vork-token:$VORK_TOKEN" "--name:$VORK_NAME" "--email:$VORK_EMAIL"; do
+      [ -n "${pair#*:}" ] || { echo "install: first install writes apps/foundry/.env and needs ${pair%%:*}" >&2; exit 2; }
+    done
+    cp "$ENV_EXAMPLE" "$ENV_FILE.tmp.$$" && mv "$ENV_FILE.tmp.$$" "$ENV_FILE" || fail_write "$ENV_FILE"
+    say created "$ENV_FILE"
+  fi
+fi
+
+# the lines the flags govern: key, flag value, flag name
+env_line() { # env_line <key> <value> <flag>
+  local key="$1" value="$2" flag="$3" current
+  current="$(env_get "$key")"
+  if [ -z "$value" ]; then
+    case "$current" in *"<"*) say placeholder "$key=$current (set with $flag)";; "") say placeholder "$key unset (set with $flag)";; *) say unchanged "$key=$current";; esac
+    return
+  fi
+  if [ "$current" = "$value" ]; then say unchanged "$key=$current"; return; fi
+  if [ $CHECK -eq 1 ]; then say drifted "$key=$current (requested $value)"; DRIFT=1; return; fi
+  env_set "$key" "$value"; say updated "$key=$value"
+}
+if [ -f "$ENV_FILE" ]; then
+  env_line FOUNDRY_OWNER_TOKEN_PATH "$OWNER_TOKEN" --owner-token
+  env_line FOUNDRY_VORK_TOKEN_PATH "$VORK_TOKEN" --vork-token
+  env_line FOUNDRY_VORK_NAME "$VORK_NAME" --name
+  env_line FOUNDRY_VORK_EMAIL "$VORK_EMAIL" --email
+  env_line FOUNDRY_PROJECT_STORAGE_PATH "$ROOT" --projects-root
+fi
+
+# --- 3. Foundry dependencies -------------------------------------------------
+if [ -d "$VORK/apps/foundry/node_modules" ]; then
+  say unchanged "$VORK/apps/foundry/node_modules (dependencies present)"
+elif [ $CHECK -eq 1 ]; then
+  say missing "$VORK/apps/foundry/node_modules (dependencies)"; DRIFT=1
+else
+  (cd "$VORK/apps/foundry" && NPM_CONFIG_UPDATE_NOTIFIER=false npm ci --no-audit --no-fund --loglevel=error >/dev/null) || fail_write "$VORK/apps/foundry/node_modules (npm ci)"
+  say updated "$VORK/apps/foundry/node_modules (npm ci)"
+fi
+
+# --- 4. rule ------------------------------------------------------------------
+put "$VORK/rules/PROJECT.md" "$DEST/rules/PROJECT.md"
+
+# --- 5. skills (replace by name, never delete) ---------------------------------
+while IFS= read -r rel; do
+  rel="${rel#./}"
+  put "$VORK/skills/$rel" "$DEST/skills/$rel"
+done < <(cd "$VORK/skills" && find . -type f | sort)
+
+# --- 6. pointer block (codex) --------------------------------------------------
+START_RE='^<!-- vork:start'
+END_MARK='<!-- vork:end -->'
+if [ "$SURFACE" = "codex" ]; then
+  BLOCK_SRC="$VORK/provisions/codex/AGENTS.md"
+  [ -f "$BLOCK_SRC" ] || { echo "install: surface file missing: $BLOCK_SRC" >&2; exit 2; }
+  UNKNOWN="$(grep -o '{{[a-z_]*}}' "$BLOCK_SRC" | grep -v '^{{projects_root}}$' || true)"
+  [ -z "$UNKNOWN" ] || { echo "install: surface file carries an unknown variable: $UNKNOWN" >&2; exit 2; }
+  BLOCK="$(awk -v r="$ROOT" '{ gsub(/\{\{projects_root\}\}/, r); print }' "$BLOCK_SRC")"
+  DST="$DEST/AGENTS.md"
+  CURRENT=""
+  if [ -f "$DST" ]; then
+    CURRENT="$(awk -v s="$START_RE" -v e="$END_MARK" '$0 ~ s {inb=1; next} $0 == e {inb=0; next} inb' "$DST")"
+  fi
+  if [ "$BLOCK" = "$CURRENT" ]; then
+    say unchanged "$DST (vork block)"
+  elif [ $CHECK -eq 1 ]; then
+    if [ -f "$DST" ] && grep -q "$START_RE" "$DST"; then say drifted "$DST (vork block)"; else say missing "$DST (vork block)"; fi
+    DRIFT=1
+  else
+    mkdir -p "$DEST" || fail_write "$DST"
+    STAMP="<!-- vork:start v=$SHA source=$TAG deployed=$(date -u +%F) -->"
+    {
+      if [ -f "$DST" ] && grep -q "$START_RE" "$DST"; then
+        awk -v s="$START_RE" '$0 ~ s {exit} {print}' "$DST"
+        printf '%s\n%s\n%s\n' "$STAMP" "$BLOCK" "$END_MARK"
+        awk -v e="$END_MARK" 'f {print} $0 == e {f=1}' "$DST"
+      else
+        if [ -f "$DST" ] && [ -s "$DST" ]; then cat "$DST"; printf '\n'; fi
+        printf '%s\n%s\n%s\n' "$STAMP" "$BLOCK" "$END_MARK"
+      fi
+    } > "$DST.tmp.$$" && mv "$DST.tmp.$$" "$DST" || fail_write "$DST"
+    say updated "$DST (vork block)"
+  fi
+fi
+
+# --- report -------------------------------------------------------------------
+if [ $CHECK -eq 1 ]; then
+  if [ $DRIFT -eq 0 ]; then echo "check: clean"; exit 0; else echo "check: DRIFT"; exit 1; fi
+fi
+echo "installed $SURFACE from $VORK @ $SHA ($TAG) root $ROOT"
+exit 0

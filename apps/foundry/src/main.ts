@@ -1,24 +1,22 @@
 import { writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
-import { CREW } from '@vork/data';
 import { loadBundle, validateBundle } from './bundle.js';
-import { agentTokenPath, APP_DIR, expandHome, loadDotenv, loadEnv, readToken } from './config.js';
+import { APP_DIR, expandHome, loadDotenv, loadEnv, readToken } from './config.js';
 import { EXIT, FoundryError, usageError } from './errors.js';
 import { buildGitOps } from './gitops.js';
 import { authIdentity, buildGitHubApi } from './github/octokit.js';
-import { kickoff } from './github/startacts.js';
 import { milestoneFolderName, openMilestoneRecord } from './milestones.js';
-import { readFileSync } from 'node:fs';
 import { runBootstrapPipeline } from './pipeline.js';
+import { formatRegistry, readRegistry } from './registry.js';
+import { templateSource } from './skeleton.js';
 import type { Bundle } from './types.js';
 import { formatVerifyReport, verifyAgainst } from './verify.js';
 
 // CLI entrypoint (`spec_foundry-interface.md §CLI`). Per-run flags override the
-// environment; the environment overrides built-in defaults. Invoked via
-// `bin/foundry`.
+// environment. Invoked via `bin/foundry`.
 
-// Foundry var — dev: main/apps/foundry/var; deployed: the active worktree's copy
+// Foundry var: `apps/foundry/var/` beside the app, or FOUNDRY_VAR
 const FOUNDRY_VAR = process.env['FOUNDRY_VAR'] ?? join(APP_DIR, 'var');
 
 interface Flags {
@@ -33,11 +31,10 @@ interface Flags {
   note?: string;
   milestone?: string;
   title?: string;
-  conducted: boolean;
 }
 
 function parseFlags(args: string[]): Flags {
-  const flags: Flags = { interactive: false, dryRun: false, verbose: false, quiet: false, conducted: false };
+  const flags: Flags = { interactive: false, dryRun: false, verbose: false, quiet: false };
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i]!;
     const valued = (name: keyof Flags & string): string => {
@@ -57,29 +54,27 @@ function parseFlags(args: string[]): Flags {
       case '--note': flags.note = valued('note'); break;
       case '--milestone': flags.milestone = valued('milestone'); break;
       case '--title': flags.title = valued('title'); break;
-      case '--conducted': flags.conducted = true; break;
       default: throw usageError(`unknown flag: ${arg}`);
     }
   }
   return flags;
 }
 
-// Interactive bundle capture: the mission core, then specialists as
-// `name:task,task; name:task` (empty for crew only).
+// Interactive bundle capture: the mission core; visibility defaults to private,
+// ruleset to standard. Needs a terminal: with stdin a pipe or a file the
+// prompts never settle, so that case exits 2 and points at --bundle.
 async function promptBundle(): Promise<Bundle> {
+  if (!process.stdin.isTTY) throw usageError('--interactive needs a terminal; pass --bundle <path> instead');
   const rl = createInterface({ input: process.stdin, output: process.stderr });
   try {
     const raw: Record<string, unknown> = {};
-    for (const field of ['project_name', 'project_key', 'mission', 'description', 'scope', 'channel'] as const) {
+    for (const field of ['project_name', 'project_key', 'mission', 'description', 'scope'] as const) {
       raw[field] = (await rl.question(`${field}: `)).trim();
     }
-    const specialistsRaw = (await rl.question('specialists (name:task,task; name:task — empty for crew only): ')).trim();
-    raw['specialists'] = specialistsRaw === ''
-      ? []
-      : specialistsRaw.split(';').map((entry) => {
-          const [name, tasks] = entry.split(':');
-          return { name: (name ?? '').trim(), tasks: (tasks ?? '').split(',').map((task) => task.trim()).filter((task) => task !== '') };
-        });
+    const visibility = (await rl.question('visibility [private]: ')).trim();
+    if (visibility !== '') raw['visibility'] = visibility;
+    const ruleset = (await rl.question('ruleset [standard]: ')).trim();
+    if (ruleset !== '') raw['ruleset'] = ruleset;
     return validateBundle(raw);
   } finally {
     rl.close();
@@ -107,8 +102,7 @@ async function commandBootstrap(flags: Flags): Promise<number> {
       bundle,
       env,
       storagePath: flags.storagePath ?? env.project_storage_path,
-      dryRun: flags.dryRun,
-      conducted: flags.conducted
+      dryRun: flags.dryRun
     },
     {
       authIdentity,
@@ -124,7 +118,7 @@ async function commandBootstrap(flags: Flags): Promise<number> {
 }
 
 function commandVerify(flags: Flags): number {
-  if (flags.against === undefined) throw usageError('verify requires --against PATH');
+  if (flags.against === undefined) throw usageError('verify requires --against <project-path>');
   if (flags.bundle !== undefined) loadBundle(flags.bundle); // validates; structure checks are bundle-independent
   if (!existsSync(flags.against)) throw usageError(`--against path not found: ${flags.against}`);
   const result = verifyAgainst(flags.against);
@@ -132,10 +126,9 @@ function commandVerify(flags: Flags): number {
   return result.clean ? EXIT.SUCCESS : EXIT.VERIFY_DRIFT;
 }
 
-// `foundry kickoff --project <key> --milestone <slug> [--title] [--note] [--conducted]`.
-// Conducted: the Draft Stage Task under the project manager's identity — he
-// owns every milestone — assigned to the AI Lead, with its creation comment.
-// Unconducted: the milestone record opened on a draft lane in main/, pushed.
+// `foundry kickoff --project <key> --milestone <slug> [--title] [--note]`:
+// the milestone record opened on a draft lane in main/, committed under the
+// clone's bound identity, pushed (`spec_foundry.md §Kickoff`).
 async function commandKickoff(flags: Flags): Promise<number> {
   if (flags.project === undefined) throw usageError('kickoff requires --project <project_key>');
   if (flags.milestone === undefined) throw usageError('kickoff requires --milestone <slug>');
@@ -143,38 +136,22 @@ async function commandKickoff(flags: Flags): Promise<number> {
   const now = new Date();
   const folder = milestoneFolderName(now, flags.milestone);
   const title = flags.title ?? flags.milestone;
-  const aiLeadTokenPath = agentTokenPath(env, CREW.ai_lead);
-  const aiLeadToken = readToken(aiLeadTokenPath);
-  const aiLead = await authIdentity(aiLeadToken).catch((error: unknown) => {
-    throw new FoundryError(EXIT.PREFLIGHT, `AI Lead "${CREW.ai_lead}" token failed to authenticate (${aiLeadTokenPath}): ${error instanceof Error ? error.message : String(error)}`);
+  const vorkToken = readToken(env.vork_token_path);
+  await authIdentity(vorkToken).catch((error: unknown) => {
+    throw new FoundryError(EXIT.PREFLIGHT, `Vork token failed to authenticate (${env.vork_token_path}): ${error instanceof Error ? error.message : String(error)}`);
   });
+  const mainDir = join(expandHome(flags.storagePath ?? env.project_storage_path), flags.project, 'main');
+  const template = templateSource('milestone.md');
+  const result = openMilestoneRecord(buildGitOps(), { mainDir, folder, title, date: now, note: flags.note, template, workToken: vorkToken });
+  process.stdout.write(`${result.lane} ${result.recordPath}\n`);
+  if (result.existing) process.stderr.write(`milestone record already exists — reported as found\n`);
+  return EXIT.SUCCESS;
+}
 
-  if (!flags.conducted) {
-    const mainDir = join(expandHome(flags.storagePath ?? env.project_storage_path), flags.project, 'main');
-    const template = readFileSync(join(APP_DIR, 'assets', 'skeleton', 'docs', 'conventions', 'templates', 'milestone.md'), 'utf8');
-    const result = openMilestoneRecord(buildGitOps(), { mainDir, folder, title, date: now, note: flags.note, template, aiLeadToken });
-    process.stdout.write(`${result.lane} ${result.recordPath}\n`);
-    if (result.existing) process.stderr.write(`milestone record already exists — reported, not duplicated\n`);
-    return EXIT.SUCCESS;
-  }
-
-  // the repo owner is the owner token's identity; the act runs under the project manager's
-  const owner = await authIdentity(readToken(env.owner_token_path));
-  const managerTokenPath = agentTokenPath(env, CREW.project_manager);
-  const managerToken = readToken(managerTokenPath);
-  await authIdentity(managerToken).catch((error: unknown) => {
-    throw new FoundryError(EXIT.PREFLIGHT, `project manager "${CREW.project_manager}" token failed to authenticate (${managerTokenPath}): ${error instanceof Error ? error.message : String(error)}`);
-  });
-  const api = buildGitHubApi({ mainToken: managerToken, acceptorTokens: new Map() });
-  try {
-    const result = await kickoff({ api, ownerLogin: owner.login, aiLeadLogin: aiLead.login, projectKey: flags.project, milestoneFolder: folder, title, note: flags.note });
-    process.stdout.write(`${result.issueNumber}\n`);
-    if (result.existing) process.stderr.write(`open project_draft task already exists — reported, not duplicated\n`);
-    return EXIT.SUCCESS;
-  } catch (error) {
-    if (error instanceof FoundryError) throw error;
-    throw new FoundryError(EXIT.GITHUB, error instanceof Error ? error.message : String(error));
-  }
+// `foundry list`: the machine's project registry (`spec_foundry.md §List`).
+function commandList(): number {
+  process.stdout.write(`${formatRegistry(readRegistry(FOUNDRY_VAR))}\n`);
+  return EXIT.SUCCESS;
 }
 
 async function main(): Promise<number> {
@@ -188,8 +165,10 @@ async function main(): Promise<number> {
       return commandVerify(flags);
     case 'kickoff':
       return commandKickoff(flags);
+    case 'list':
+      return commandList();
     case undefined:
-      throw usageError('usage: foundry <bootstrap|verify|kickoff> [flags]');
+      throw usageError('usage: foundry <bootstrap|verify|kickoff|list> [flags]');
     default:
       throw usageError(`unknown command: ${command}`);
   }

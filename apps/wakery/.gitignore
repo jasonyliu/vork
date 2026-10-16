@@ -1,7 +1,0 @@
-node_modules/
-dist/
-var/
-.env
-.env.bak*
-.env.local
-.DS_Store
