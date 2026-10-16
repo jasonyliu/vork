@@ -11,13 +11,13 @@ The kit is four things:
 | The skills | `foundry` (how to drive the start acts), `release` (how to close a milestone), `techspec` (how to write technical specs). | `skills/` |
 | The templates | The eleven record templates every project carries: charter, backlog, milestone, decomposition, research, release, integration, review, deployment, workflow, and their index. | `docs/conventions/templates/` |
 
-Two harnesses are supported as deployment surfaces: Claude (Claude Code and Claude Desktop share one install path) and Codex. One installer lands the kit on either.
+Two harnesses are supported as deployment surfaces: Claude (Claude Code and Claude Desktop share one install path) and Codex (Codex CLI and Codex Desktop). One installer lands the kit on either.
 
 ## Before it runs
 
 Everything below is yours to supply, in the order you need it.
 
-**Two GitHub accounts.** Your own, the owner: it owns every repository and approves every pull request. And a second one, the Vork account: every agent session commits and pushes as it. The separation is the review gate, since an account cannot approve its own pull request. One token per account, each saved to a file with mode `0600`; the owner token needs the `repo` scope (classic) or repository administration, contents, issues and pull requests (fine-grained), the Vork token `repo`. Add `read:user` to the owner token if you want Foundry to check your plan before it creates anything.
+**Two GitHub accounts.** Your own, the owner: it owns every repository and approves every pull request. And a second one, the Vork account: every agent session commits and pushes as it. The separation is the review gate, since an account cannot approve its own pull request, and a layer of protection besides: an agent acting as the Vork account can do no more than that account was granted, whatever it gets wrong. One token per account, each saved to a file with mode `0600`; the owner token needs the `repo` scope (classic) or repository administration, contents, issues and pull requests (fine-grained), the Vork token `repo`. Add `read:user` to the owner token if you want Foundry to check your plan before it creates anything.
 
 **A plan that matches your repositories.** GitHub Free applies branch protection to public repositories alone. On Free, found public repositories, or private ones with `"ruleset": "none"` in the bundle, in which case the review gate holds by convention and nothing enforces it. A paid plan takes any combination.
 
