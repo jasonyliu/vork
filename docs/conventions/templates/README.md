@@ -1,6 +1,6 @@
 # Record Templates
 
-Canonical templates for the Project records defined in `docs/agents/rules/PROJECT.md §Records` and `§Structure`. Instantiate the template — do not restructure it; the sections are the record's contract. Placeholders use `{curly-braces}` (angle brackets appear only inside code spans); guidance lives in HTML comments and is deleted at instantiation.
+Canonical templates for the project records defined in `rules/PROJECT.md §Records` and `§Structure`. Instantiate the template — do not restructure it; the sections are the record's contract. Placeholders use `{curly-braces}` (angle brackets appear only inside code spans); guidance lives in HTML comments and is deleted at instantiation.
 
 | Template | Record | Canonical location |
 |---|---|---|

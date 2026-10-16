@@ -11,26 +11,25 @@
 
 ## Feature
 
-<!-- The integrated feature, matching its row in the milestone's decomposition.md §Features. Leave empty for a fix integration. -->
+<!-- The integrated feature, matching its step in the milestone's decomposition.md §Plan. Leave empty for a fix integration. -->
 
 - **Feature:** {feature title}
 - **Delivers:** {one line — the capability this branch puts on `dev`}
 
 ## Fix
 
-<!-- The integrated fix, matching its decomposition.md §Fixes row — or its origin when minted mid-milestone (a Review gap, an unblock, a boundary correction). Leave empty for a feature integration. -->
+<!-- The integrated fix, matching its decomposition.md §Plan step — or its origin when minted mid-milestone (a Review gap, an unblock, a boundary correction). Leave empty for a feature integration. -->
 
 - **Fix:** {fix title}
 - **Addresses:** {one line — the bug, defect, or enhancement and where it surfaced}
 
-## Tasks
+## Steps
 
-<!-- Every Task this integration lands: the branch's Execution Tasks and this Integration Stage Task itself, by decomposition key. -->
+<!-- Every decomposition step this integration completes, by its number in decomposition.md §Plan. -->
 
-| Key | Task | Reference | State |
-|---|---|---|---|
-| {E#} | {title} | {where it lives on the execution surface} | {Completed \| Cancelled} |
-| {I#} | {this Integration Stage Task} | {reference} | — |
+| # | Step | Status |
+|---|---|---|
+| {#} | {step} | {done \| dropped} |
 
 ## Conflicts
 

@@ -4,7 +4,7 @@
 
 ## Scope
 
-{the objective, boundary, and excluded areas of the milestone — features and the fix work (bugs/defects/enhancements) the Principal and the AI Lead decided to include}
+{the objective, boundary, and excluded areas of the milestone — features and the fix work (bugs/defects/enhancements) the Principal and the working agent decided to include}
 
 ## Deliverables
 

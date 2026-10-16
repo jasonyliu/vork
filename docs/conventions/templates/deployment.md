@@ -1,10 +1,10 @@
 # Deployment Manual: {environment} — {project title}
 
-<!-- Canonical location: main/docs/deployments/deploy_<environment>/<environment>.md per PROJECT.md §Deployments — one manual per environment, written entirely from the project's own specifics. The manual is the Primary Specification of every Deployment Stage Task targeting this environment (DELIVERY.md §Deployment) and must make the deployment executable without prior context. Scripts and tooling it invokes live under main/provisions/, referenced from the relevant section. -->
+<!-- Canonical location: main/docs/deployments/deploy_<environment>/<environment>.md per PROJECT.md §Deployments — one manual per environment, written entirely from the project's own specifics; it makes the deployment executable without prior context. Scripts and tooling it invokes live under main/provisions/, referenced from the relevant section. -->
 
 ## Environment
 
-{what this environment is and serves — its concrete instances: hosts, URLs, deploy targets, and the consumers that read from it (PROJECT.md §Environments)}
+{what this environment is and serves — its concrete instances: hosts, URLs, deploy targets, and the consumers that read from it (PROJECT.md §Deployments)}
 
 ## When
 
@@ -24,4 +24,4 @@
 
 ## Record
 
-{what record an invocation produces and where it lives — from none to one per invocation; a failed attempt's reason is recorded in the Task's transition comment, and here when this section requires a record (DELIVERY.md §Deployment)}
+{what record an invocation produces and where it lives — from none to one per invocation; a failed attempt's reason is recorded here when this section requires a record, and in the milestone's decomposition trail otherwise}

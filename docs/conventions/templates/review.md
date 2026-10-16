@@ -8,7 +8,7 @@
 
 ## Evaluation
 
-{how the produced artifacts measure against the Milestone's Scope, Deliverables, and Verification, plus the verification process used to reach the verdict — including the state of Development staged for the Principal's hands-on verification}
+{how the produced artifacts measure against the Milestone's Scope, Deliverables, and Verification, plus the verification process used to reach the verdict — including what was staged for the Principal's hands-on verification and where}
 
 ## Incomplete
 
@@ -20,4 +20,4 @@
 
 ## Reference
 
-{the produced artifacts, completed Tasks, governing specs, and supporting evidence underlying the verdict — the pointers the Release Stage Task will need}
+{the produced artifacts, completed steps, governing specs, and supporting evidence underlying the verdict — the pointers the release will need}
