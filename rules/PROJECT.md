@@ -13,7 +13,7 @@ The Principal is the person whose projects these are: the owner of every reposit
 The storage root is chosen when the kit is installed and written into Foundry's environment; `~/Vork/projects/` is the suggested default. The durable rule underneath the layout: **one mutable checkout belongs to one actor.** On a machine where one actor works a project, `main/` is the only clone it carries. On a machine where several agents work the same project concurrently, each agent works its own `team/<agent>/` clone. Which machine plays which part is the Principal's arrangement. Concurrency across machines is already handled by git itself: every actor pushes lanes to the same remote. When it is unclear whether you are the main agent on a project, ask first — then work in `main/`.
 
 - The kit itself — this convention, the record templates, Foundry and the skills every project uses — is Vork, installed once per machine from its own clone; the clone's `README.md` is the map.
-- Credentials live outside every project as files, one per account, read by path; Foundry's environment names the two token files the convention needs.
+- Credentials live outside every project as files, one per account, read by path; Foundry's environment names the two token files the convention needs, the Principal's and the Vork account's.
 - The same layout exists on every machine the Principal works from.
 
 ## Lifecycle
@@ -162,8 +162,8 @@ The issues and the backlog serve different purposes: the backlog carries work in
 
 ## Identity
 
-- Two GitHub accounts carry a project: the Principal's own, which owns every repository and approves every pull request, and the work account, which every agent session commits and pushes as. Foundry binds the work account's identity to `main/` at founding; commit under it.
-- Pull requests and GitHub API writes authenticate with the work account's token, a file read by path and bound per command; remote URLs stay clean. The Principal reviews and approves under the Principal's own account; keeping the two identities separate is what makes that approval a real gate.
+- Two GitHub accounts carry a project: the Principal's own, which owns every repository and approves every pull request, and the Vork account, which every agent session commits and pushes as. Foundry binds the Vork account's commit identity, the name and email the kit was installed with, to `main/` at founding; commit under it.
+- Pull requests and GitHub API writes authenticate with the Vork account's token, a file read by path and bound per command; remote URLs stay clean. The Principal reviews and approves under the Principal's own account; keeping the two identities separate is what makes that approval a real gate.
 
 ## Startup
 
