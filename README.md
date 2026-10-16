@@ -2,6 +2,8 @@
 
 Vork is a project kit for building software with an AI agent: one project shape, one lifecycle, and the tools that found projects, write specs and close milestones. It is the kit one engineer uses on every project, published so that anyone with two GitHub accounts, Node and a harness can clone it, install it, and found a project the same way.
 
+Looking for the full conduction framework, the autonomous multi-agent crew this kit grew out of? That is release 1, tag [`v2026.10.13`](https://github.com/jasonyliu/vork/tree/v2026.10.13): the policy corpus, the specs, the four services and a note for an AI agent, published whole as a reading release with its own README.
+
 The kit is four things:
 
 | Piece | What it is | Where |
