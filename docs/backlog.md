@@ -34,17 +34,10 @@ Release 2 treats every consumer of the kit as a deployment surface and ships two
 
 - 2026-10-14 — added at the Draft of `milestone_v2026.10.14_standalone-kit`.
 
-### Foundry on the GitHub REST API version of 2022-11-28 (2026-10-16)
-
-`@octokit/rest` 21 sends no `X-GitHub-Api-Version` header, so Foundry speaks the `2022-11-28` version, which GitHub supports until 2028-03-10; GitHub's deprecation notices for `POST /user/repos` and `PATCH /user/repository_invitations/{id}` printed during the throwaway founding on 2026-10-16 say so. The move is to `@octokit/rest` 22 or an explicit `X-GitHub-Api-Version: 2026-03-10`, after checking the two endpoints' shapes under the newer version. Evidence: the first founding's run log under Foundry's var on the build machine's staging clone; GitHub's API versions page.
-
-**Trail:**
-
-- 2026-10-16 — added during step 5 of `milestone_v2026.10.14_standalone-kit`; the kit works as published until the sunset date, so the bump is its own fix.
-
 ## Skipped
 
 ## Done
 
 | Date | Item |
 |---|---|
+| 2026-10-16 | Foundry on the GitHub REST API version of 2022-11-28 — every request now names `2026-03-10`, `@octokit/rest` 22; shipped by `milestone_v2026.10.14_standalone-kit` the day it was added |
