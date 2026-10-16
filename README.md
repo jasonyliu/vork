@@ -1,96 +1,94 @@
 # Vork
 
-Vork is a project kit for building software with an AI agent: one project shape, one lifecycle, and the tools that found projects, write specs and close milestones. Its first release preserves the multi-agent conduction framework it grew out of, with what works, what was never built and what broke stated plainly.
+Vork is a project kit for building software with an AI agent: one project shape, one lifecycle, and the tools that found projects, write specs and close milestones. It is the kit one engineer uses on every project, published so that anyone with two GitHub accounts, Node and a harness can clone it, install it, and found a project the same way.
 
-## Release 1
+The kit is four things:
 
-This release is the conduction framework: the autonomous multi-agent development crew I built and ran from February to August 2026, then retired. It is published whole, at its own tag, as a record of the attempt. The kit that replaced it follows in release 2.
+| Piece | What it is | Where |
+|---|---|---|
+| The convention | `PROJECT.md`: how a project is stored, structured, recorded, branched, and moved through its lifecycle. The one document every session works by. | `rules/PROJECT.md` |
+| Foundry | The start acts: `bootstrap` founds a project on GitHub and on disk; `kickoff` opens a milestone; `verify` checks a tree against the shape; `list` shows what this machine founded. | `apps/foundry/` |
+| The skills | `foundry` (how to drive the start acts), `release` (how to close a milestone), `techspec` (how to write technical specs). | `skills/` |
+| The templates | The eleven record templates every project carries: charter, backlog, milestone, decomposition, research, release, integration, review, deployment, workflow, and their index. | `docs/conventions/templates/` |
 
-**This release is a reading release, not a working build.** The tree is an extraction from a private project: every host name, account, credential path, project key and seeded row that belonged to that instance has been removed or replaced by a placeholder, and some of the services it ran against were never part of the repository. Nothing in it runs as published. `Before it runs` lists what you supply and change to bring it up, and the three lists after it say what you get when you do.
-
-## Contents
-
-```text
-docs/policy/         the six governing documents: FRAMEWORK, PROJECT, TASK, SECURITY, DELIVERY, MEMORY
-docs/conventions/    named values and the record templates every project shares
-specs/               the design blueprints: the data layer, the git model, and one folder per app
-apps/data/           @vork/data — schema migrations, the seed, the shared test surface
-apps/wakery/         the dispatcher: GitHub webhook in, OpenClaw agent turns out
-apps/resolver/       the risk-code resolver the auditor calls
-apps/foundry/        the CLI that founds a project and opens a milestone
-provisions/          GitHub rulesets, the OpenClaw policy hook, the techspec skill
-```
-
-The model in one paragraph. A task is a GitHub issue on a project board with two fields, `Status` and `Audit`. Agents move it by posting a transition comment. Wakery receives the webhook, works out which agent the new state belongs to, and sends that agent one turn through the OpenClaw gateway. An auditor gates every task before execution and reviews it after; the Principal is called in only at a `Govern` checkpoint. Foundry creates the whole surface for a new project in one run. The policy documents say who may do what; the specs say how each piece does it.
+Two harnesses are supported as deployment surfaces: Claude (Claude Code and Claude Desktop share one install path) and Codex (Codex CLI and Codex Desktop). One installer lands the kit on either.
 
 ## Before it runs
 
-Everything below is yours to supply or change. The order is the order you need it in.
+Everything below is yours to supply, in the order you need it.
 
-**Hosts.** One host runs Wakery, Foundry and the OpenClaw gateway together; Wakery authenticates to the gateway as a same-host backend client. Postgres is reachable from that host. A public HTTPS endpoint, written as `<ingress-host>` throughout, forwards to Wakery's bind address `127.0.0.1:4311` for GitHub's webhook deliveries. Node.js 22 or later.
+**Two GitHub accounts.** Your own, the owner: it owns every repository and approves every pull request. And a second one, the Vork account: every agent session commits and pushes as it. The separation is the review gate, since an account cannot approve its own pull request, and a layer of protection besides: an agent acting as the Vork account can do no more than that account was granted, whatever it gets wrong. One token per account, each saved to a file with mode `0600`; the owner token needs the `repo` scope (classic) or repository administration, contents, issues and pull requests (fine-grained), the Vork token `repo`. Add `read:user` to the owner token if you want Foundry to check your plan before it creates anything.
 
-**Credentials.** A keystore directory, written as `<keystore>`, holding one `0600` file per secret; every app reads secrets by path and never from the environment. The files it expects:
+**A plan that matches your repositories.** GitHub Free applies branch protection to public repositories alone. On Free, found public repositories, or private ones with `"ruleset": "none"` in the bundle, in which case the review gate holds by convention and nothing enforces it. A paid plan takes any combination.
 
-| File | What it is |
-|---|---|
-| `github/owner.token` | a personal access token for the account that owns every project: repository admin, projects, webhooks |
-| `github/main.token`, `github/heimdall.token`, `github/sarge.token`, `github/<specialist>.token` | one token per agent account; the framework ran every non-auditor agent under one shared account and the auditor under a second, separate one |
-| `github/webhook_wakery` | the HMAC secret you generate; GitHub signs deliveries with it and Wakery verifies them |
-| `postgres/vork-owner.password`, `postgres/vork-app.password` | the two database roles below |
-| `openclaw/gateway-token` | the gateway's shared token |
+**Node 22 or later, `git`, and one harness.** Claude Code or Claude Desktop, or Codex.
 
-**Database.** A Postgres database `vork` with two roles: `vork_owner` runs migrations and the seed, `vork_app` is the runtime role and holds no DDL. Run `npm ci` in `apps/data/`, then `npm run migrate` and `npm run seed` there as `vork_owner`. Before the seed, open `apps/data/src/seed.ts` and fill two arrays that ship empty because their rows were the original instance's accounts: `GITHUB_AGENT_SEED` with each agent account's login, node id, agent id and role, and `GITHUB_REPO_PROJECT_SEED` with the repository node id, owner, board node id and board number of each project you track. With both arrays empty the seed writes no agent and no mapping row, and Wakery drops every webhook as unmapped. The seed registers one project key, `vork`; Foundry registers each project it founds.
+## Install
 
-**Environment files.** `apps/wakery/.env`, `apps/foundry/.env` and `apps/resolver/.env`, each from its `.env.example`, with every `<...>` placeholder replaced: `<keystore>`, `<db-host>`, `<ingress-host>` and `<project-storage-path>`, the parent directory under which each project's clone lives. These carry no default and the app refuses to start without them: `WAKERY_PROJECT_STORAGE_PATH`, `FOUNDRY_PROJECT_STORAGE_PATH`, `FOUNDRY_AGENT_TOKEN_DIR`, `FOUNDRY_OWNER_TOKEN_PATH`, `FOUNDRY_WEBHOOK_URL`, `FOUNDRY_WEBHOOK_SECRET_PATH`. Wakery's example file still names a database `wakery` and a role `wakery` from an earlier era; point its `WAKERY_DATABASE_*` variables at the same `vork` database and `vork_app` role the other apps use, and its password path at `postgres/vork-app.password`.
+```sh
+git clone https://github.com/jasonyliu/vork.git
+cd vork
+git checkout v<YYYY.MM.DD>      # the release tag you are installing
+provisions/install --surface claude \
+  --owner-token ~/.vork/github/owner.token \
+  --vork-token  ~/.vork/github/vork.token \
+  --name  "Your Agent" --email "agent@example.com" \
+  --projects-root ~/Vork/projects
+```
 
-**GitHub surface, per project.** A repository with standing branches `main` and `dev`. A ProjectV2 board with two single-select fields: `Status` with options Init, Todo, Pending, Progress, Done, Reviewed, Completed, Cancelled, and `Audit` with options Gated, Approved, Revise, Govern. The label set in `apps/foundry/assets/labels.json`. The rulesets in `provisions/github/rulesets/`, which require a status check named `CI`; the repository ships no workflow, so you write one with that name, and the snooze module holds a task while a workflow run of that name is in flight. A webhook to `https://<ingress-host>/adapters/github/webhook` subscribed to the events in `apps/foundry/assets/webhook-events.json` and signed with the secret above. Collaborator grants for the agent accounts. Foundry creates all of this for a new project once its `.env` and tokens are in place; an existing repository gets it by hand.
+`--surface codex` for Codex; run the installer once per surface. The first run on a machine needs the four identity flags and writes `apps/foundry/.env` from them; every later run takes none. `--projects-root` is where founded projects live, `~/Vork/projects` unless you say otherwise. `--name` and `--email` are the commit identity every founded clone carries, the Vork account's.
 
-**Agents.** An OpenClaw gateway on the host speaking gateway protocol 4; the framework was verified against OpenClaw 2026.6.11. Agents `main`, `heimdall` and `sarge`, plus `visor` if you route coding work to a specialist. Each agent's context documents are yours to write: the framework's were personal and are not published, and the message templates assume each agent's `TOOLS.md` names the channel where notices to the Principal go. The policy hook in `provisions/openclaw/hooks/vork-policy/` installs into the gateway and injects the policy documents into each agent at bootstrap; its `config.json` maps agent ids to documents. A messaging channel for checkpoint, stall and cap-alert notices; the framework used Telegram topics, one per project. Every session key a route names, such as `agent:main:<project_key>:spec`, exists on the gateway, or the route uses run delivery with the `[wake_route_lease_id]` template.
+What the installer does: creates the projects root, writes `apps/foundry/.env`, installs Foundry's dependencies, lands `rules/PROJECT.md` and the three skills on the surface, and for Codex writes a pointer block into `~/.codex/AGENTS.md`. It compares before every write, deletes nothing, and `provisions/install --surface <s> --check` reports drift without writing. The two manuals under `docs/deployments/` say the same in the convention's own form.
 
-**Running.** `apps/wakery/deploy/install.sh` renders the launchd template and loads it on macOS; on another system run `npm start` in `apps/wakery/` under your own supervisor. `apps/foundry/bin/foundry` and `apps/resolver/bin/resolver` run from their directories after `npm ci`. Wakery starts only against a migrated database.
+Upgrading is `git checkout <newer tag>` and the installer again. Rolling back is the previous tag and the installer again.
 
-**Exposure.** Ingress verifies the webhook signature and nothing else: it reads no comment author and checks no collaborator status, so on a repository anyone can comment on, anyone can drive a turn. The collaborator boundary of a private repository is the only guard. Keep each conducted repository private and collaborator-only, or add an actor check to `apps/wakery/src/ingress/` before a public endpoint goes live.
+## Found a project
 
-**Routes.** A route is switched off by setting its status to `disabled`; a route that has ever held a lease is referenced by the lease table and cannot be deleted.
+Write a bundle:
+
+```json
+{
+  "project_name": "Sample Project",
+  "project_key": "sample",
+  "mission": "One paragraph on why the project exists.",
+  "description": "The goal it exists to achieve.",
+  "scope": "The current boundary of the work.",
+  "visibility": "private",
+  "ruleset": "standard"
+}
+```
+
+`project_key` names the repository and the folder; `visibility` and `ruleset` default to `private` and `standard`. Then, from the clone:
+
+```sh
+apps/foundry/bin/foundry bootstrap --bundle sample.json --dry-run
+apps/foundry/bin/foundry bootstrap --bundle sample.json
+apps/foundry/bin/foundry list
+```
+
+The dry run authenticates both tokens, checks names and paths, and renders the skeleton to scratch with zero mutation. The act creates the repository with `main` and `dev`, the `defect` label beside GitHub's defaults, the two rulesets, the Vork account's grant, the clone at `<projects-root>/sample/main/` with the charter, the backlog and the templates, and an entry in `apps/foundry/var/projects.json`. A run that fails is re-run: everything that exists is skipped, and the event log under `apps/foundry/var/runs/` says what happened. `ln -s "$PWD/apps/foundry/bin/foundry" ~/.local/bin/foundry` gives the command a stable path.
+
+Then open your harness in the project and write the charter together. The convention loads into every Claude session on its own; a Codex session reads it when it touches the project, as the pointer block says. A milestone opens with `foundry kickoff --project sample --milestone <slug>`, which pushes the templated record on its draft lane; the `foundry` and `release` skills carry the rest.
 
 ## Works
 
-- The four suites pass as published: `apps/data` 38 tests, `apps/resolver` 53, `apps/foundry` 90 with one skipped by design, `apps/wakery` 336. Every app typechecks. Run `npm ci` then `npm test` in each directory, `apps/data` first.
-- The conduction loop ran in production on the original instance for months: webhook in, eligibility, routing, dispatch, the turn ledger, empty-run recovery, the snooze holds, the board sweep and the stall alarm, the two audit gates and the `Govern` checkpoint.
-- The policy corpus, the conventions and record templates, the specs for every app and the data layer, and the techspec skill are complete as documents.
-- Foundry founds a project end to end: repository, board and fields, labels, webhook, grants, clones, the Inception task and the registry rows.
-- The resolver maps an operation chain to risk codes against the seeded wildcard rows.
+- Foundry's suite: 75 tests, typecheck clean; `verify` passes on this repository, which follows its own convention.
+- The installer's tests: 26 assertions over a scratch clone and a scratch home, `provisions/install.test.sh`.
+- The convention, the skills and the templates are the ones in daily use by the author, with the author's own machines and accounts taken out.
 
-## Unbuilt
+## Limits
 
-Specified in the documents and never built.
+- Foundry founds repositories under a personal account. Organizations are untested.
+- GitHub Free: branch protection on private repositories is refused by the plan; Foundry says so before it creates anything when the owner token carries `read:user`, and at the ruleset step otherwise, with the two ways out.
+- The installer is Bash and expects a POSIX machine; it is exercised on macOS.
+- One surface each for Claude and Codex. Other harnesses are one surfaces table row, one manual and one installer branch away; the author's own third harness is on the backlog.
 
-- The memory policy, `docs/policy/MEMORY.md`, and the Memory Keeper agent it names, Raven. The document is complete; no code or agent ever existed.
-- The adversarial QA function the security policy calls the red team. Parked in June 2026 and never started.
-- Hotfix conduction, the `hotfix/<slug>` lane as a conducted stage task. Designed, never exercised, retired in August 2026.
-- The merge queue the branching policy names as the concurrency mechanism. Deferred for a GitHub plan that never came.
+## History
 
-## Broken
+Release 1, tag `v2026.10.13`, is the multi-agent conduction framework this kit grew out of: an autonomous development crew built and run from February to August 2026, then retired, published whole as a reading release with its policy corpus, its specs, its four services and a note for an AI agent on what it assumed and what broke. The kit replaced it. The framework stays readable at its tag, and its README is the account of it.
 
-Known broken at the tag, left as found.
-
-- **The transition parser against its own grammar.** `apps/wakery/templates/transition-comment.md` tells agents to write a paired transition as `To: Done (Audit: Gated)`. `parseTransitionTargets` in `apps/wakery/src/adapters/github/adapter.ts` reads neither half of that line and returns nothing, so a paired comment carries no expected state. The consequence: a transition registers only once the board fields have already moved, and the field-lag protection the pending path exists for never engages for paired comments. The bare form `To: Done` and the audit-only form `To: Audit Approved` parse. Broken since the grammar was declared canonical in August 2026.
-- **Two inspection scripts select columns that were renamed.** `apps/wakery/src/scripts/inspect-all.ts` and `dump-config-tables.ts` read `repo_id`, `owner_name`, `project_title` and their siblings from `github_repo_project`; the columns are `github_repo_id`, `github_owner_name`, `github_project_title`. Both fail on the current schema.
-- **`foundry verify` fails against this repository.** It checks a tree against the skeleton Foundry scaffolds, and this tree is an extraction, not a founded project. The suite's standing-fixture test skips itself for the same reason. Verify works against a project Foundry founded.
-- **Ingress authenticates deliveries, not authors.** Listed under `Exposure` above; it is a design gap, not a regression.
-
-## Cost
-
-Measured over the original instance's run: 86.8% of tokens and 79.9% of wall-clock time went to conduction itself, the audit turns, transitions, dispatches and re-wakes that make the work traceable, rather than to the work the tasks named. That is the price of a crew that documents every step whether or not anyone reads it, and it is why the crew was retired. The measurement is in the original project's records, which are private.
-
-## Provenance
-
-The framework was built from February to August 2026 under another name, as an attempt to rebuild an engineering team out of agents. It was retired when its cost became clear and the open-ended work moved back to one person and one agent in one session. What survived, the project shape, the lifecycle, the records and the founding tool, is the kit that release 2 publishes.
-
-This repository starts at the extraction. The commit history, the milestone and research records, the incident trail and the tracker it references belong to the original project and are not published; where a spec or a comment cites one of them, the pointer stays as it was written. The former name is replaced by Vork throughout; the four agent personas, `main`, `heimdall`, `sarge` and `visor`, are kept. Placeholders in angle brackets stand where an operator's own value goes; the release note for an AI agent, `docs/releases/release_v2026.10.13/agent-notes.md`, lists every one of them.
-
-Releases are tagged `v<YYYY.MM.DD>`. Release 1 stays at its tag; later releases replace the framework with the kit.
+Releases are tagged `v<YYYY.MM.DD>`. This repository follows the convention it ships: `docs/charter.md` is the map, `docs/backlog.md` the standing list, `docs/milestones/` the record of each release.
 
 ## License
 
-MIT. See `LICENSE`. This release takes no contributions; take what you need and build further as you wish, as `CONTRIBUTING.md` says.
+MIT. See `LICENSE` and `CONTRIBUTING.md`.
