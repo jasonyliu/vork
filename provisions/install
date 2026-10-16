@@ -67,7 +67,13 @@ put() {
   say updated "$dst"
 }
 
+ENV_FILE="$VORK/apps/foundry/.env"
+ENV_EXAMPLE="$VORK/apps/foundry/.env.example"
+env_get() { awk -v k="$1" 'index($0, k "=") == 1 { print substr($0, length(k) + 2); exit }' "$ENV_FILE" 2>/dev/null; }
+
 # --- 1. root ------------------------------------------------------------------
+# the flag, else the root the environment already holds, else the suggested default
+if [ -z "$ROOT" ] && [ -f "$ENV_FILE" ]; then ROOT="$(env_get FOUNDRY_PROJECT_STORAGE_PATH)"; fi
 [ -n "$ROOT" ] || ROOT="~/Vork/projects"
 ROOT="$(expand_home "$ROOT")"
 if [ -d "$ROOT" ]; then
@@ -80,8 +86,6 @@ else
 fi
 
 # --- 2. Foundry environment --------------------------------------------------
-ENV_FILE="$VORK/apps/foundry/.env"
-ENV_EXAMPLE="$VORK/apps/foundry/.env.example"
 
 # env_set <key> <value>: replace the key's line in $ENV_FILE, or append it
 env_set() {
@@ -91,8 +95,6 @@ env_set() {
     { print }
     END { if (!done) print k "=" v }' "$ENV_FILE" > "$tmp" && mv "$tmp" "$ENV_FILE" || fail_write "$ENV_FILE"
 }
-env_get() { awk -v k="$1" 'index($0, k "=") == 1 { print substr($0, length(k) + 2); exit }' "$ENV_FILE" 2>/dev/null; }
-
 ENV_FIRST=0
 if [ ! -f "$ENV_FILE" ]; then
   ENV_FIRST=1

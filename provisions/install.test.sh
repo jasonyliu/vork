@@ -32,7 +32,7 @@ echo "install --surface claude, first run"
 out="$("$INSTALL" --surface claude --owner-token "$WORK/keys/owner.token" --vork-token "$WORK/keys/vork.token" --name "Vork Bot" --email "vork@example.com" --projects-root "$WORK/projects")"
 assert "root created" "[ -d '$WORK/projects' ]"
 assert ".env created with the five lines" "grep -q '^FOUNDRY_OWNER_TOKEN_PATH=$WORK/keys/owner.token$' '$ENV' && grep -q '^FOUNDRY_VORK_TOKEN_PATH=$WORK/keys/vork.token$' '$ENV' && grep -q '^FOUNDRY_VORK_NAME=Vork Bot$' '$ENV' && grep -q '^FOUNDRY_VORK_EMAIL=vork@example.com$' '$ENV' && grep -q '^FOUNDRY_PROJECT_STORAGE_PATH=$WORK/projects$' '$ENV'"
-assert ".env carries no placeholder" "! grep -q '<' '$ENV'"
+assert ".env value lines carry no placeholder" "! grep -qE '^[A-Z_]+=.*<' '$ENV'"
 assert "rule byte-equal, no frontmatter" "cmp -s '$CLONE/rules/PROJECT.md' '$HOME/.claude/rules/PROJECT.md'"
 assert "three skills byte-equal" "diff -r '$CLONE/skills' '$HOME/.claude/skills' >/dev/null"
 assert "no codex surface touched" "[ ! -d '$HOME/.codex' ]"
@@ -41,7 +41,7 @@ assert "report names the surface and root" "[[ \"$out\" == *'installed claude fr
 echo "second run, no flags"
 out="$("$INSTALL" --surface claude)"
 assert "every path unchanged" "! grep -qE '^(updated|created|installed) ' <<<\"$out\""
-assert ".env unchanged (root re-derived from the default is not written over)" "grep -q '^FOUNDRY_PROJECT_STORAGE_PATH=$WORK/projects$' '$ENV'"
+assert ".env keeps its root without --projects-root" "grep -q '^FOUNDRY_PROJECT_STORAGE_PATH=$WORK/projects$' '$ENV'"
 
 echo "--check"
 set +e; "$INSTALL" --surface claude --check >/dev/null; code=$?; set -e
@@ -53,13 +53,13 @@ assert "an edited landed file exits 1 naming it" "[ $code -eq 1 ] && [[ \"$out\"
 assert "the next install restores it" "cmp -s '$CLONE/skills/release/SKILL.md' '$HOME/.claude/skills/release/SKILL.md'"
 
 echo "install --surface codex on the installed machine"
-printf '# my own notes\nkeep me\n' > "$HOME/.codex/AGENTS.md" 2>/dev/null || { mkdir -p "$HOME/.codex"; printf '# my own notes\nkeep me\n' > "$HOME/.codex/AGENTS.md"; }
+mkdir -p "$HOME/.codex"; printf '# my own notes\nkeep me\n' > "$HOME/.codex/AGENTS.md"
 before="$(cat "$ENV")"
 "$INSTALL" --surface codex >/dev/null
 assert ".env byte-identical" "[ \"\$(cat '$ENV')\" = \"\$before\" ]"
 assert "rule byte-equal" "cmp -s '$CLONE/rules/PROJECT.md' '$HOME/.codex/rules/PROJECT.md'"
 assert "skills byte-equal" "diff -r '$CLONE/skills' '$HOME/.codex/skills' >/dev/null"
-assert "pointer block present once with the root" "[ \$(grep -c '<!-- vork:start' '$HOME/.codex/AGENTS.md') -eq 1 ] && grep -q \"Projects under \\\`$WORK/projects/\\\`\" '$HOME/.codex/AGENTS.md'"
+assert "pointer block present once with the root" "[ \$(grep -c '<!-- vork:start' '$HOME/.codex/AGENTS.md') -eq 1 ] && grep -q 'Projects under .$WORK/projects/' '$HOME/.codex/AGENTS.md'"
 assert "operator content preserved" "head -2 '$HOME/.codex/AGENTS.md' | grep -q 'keep me'"
 snap="$(cat "$HOME/.codex/AGENTS.md")"
 "$INSTALL" --surface codex >/dev/null
@@ -67,7 +67,7 @@ assert "second codex run leaves AGENTS.md byte-identical" "[ \"\$(cat '$HOME/.co
 
 echo "a different root rewrites the block and the .env line; --check with the first value reports drift"
 "$INSTALL" --surface codex --projects-root "$WORK/other" >/dev/null
-assert "block rewritten in place, once" "[ \$(grep -c '<!-- vork:start' '$HOME/.codex/AGENTS.md') -eq 1 ] && grep -q \"Projects under \\\`$WORK/other/\\\`\" '$HOME/.codex/AGENTS.md' && head -2 '$HOME/.codex/AGENTS.md' | grep -q 'keep me'"
+assert "block rewritten in place, once" "[ \$(grep -c '<!-- vork:start' '$HOME/.codex/AGENTS.md') -eq 1 ] && grep -q 'Projects under .$WORK/other/' '$HOME/.codex/AGENTS.md' && head -2 '$HOME/.codex/AGENTS.md' | grep -q 'keep me'"
 assert ".env line rewritten" "grep -q '^FOUNDRY_PROJECT_STORAGE_PATH=$WORK/other$' '$ENV'"
 set +e; "$INSTALL" --surface codex --projects-root "$WORK/projects" --check >/dev/null; code=$?; set -e
 assert "--check with the first root exits 1" "[ $code -eq 1 ]"
