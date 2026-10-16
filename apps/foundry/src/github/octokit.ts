@@ -17,8 +17,14 @@ export interface OctokitApiOptions {
 // contract explicit and the deprecation notices away.
 export const GITHUB_API_VERSION = '2026-03-10';
 
-export function octokitOptions(token: string): { auth: string; request: { headers: { 'X-GitHub-Api-Version': string } } } {
-  return { auth: token, request: { headers: { 'X-GitHub-Api-Version': GITHUB_API_VERSION } } };
+// Constructor options carry no default headers to the wire; a before-request
+// hook does. `request` lets a test inject its own fetch.
+export function newOctokit(token: string, request: { fetch?: typeof fetch } = {}): Octokit {
+  const client = new Octokit({ auth: token, request });
+  client.hook.before('request', (options) => {
+    options.headers = { ...options.headers, 'X-GitHub-Api-Version': GITHUB_API_VERSION };
+  });
+  return client;
 }
 
 const RATE_LIMIT_MAX_ATTEMPTS = 3;
@@ -61,7 +67,7 @@ export interface TokenIdentity {
 // Authenticate one token: its `GET /user` login is the identity
 // (`spec_foundry.md §Preflight`); the plan rides along when the scope allows.
 export async function authIdentity(token: string): Promise<TokenIdentity> {
-  const rest = new Octokit(octokitOptions(token));
+  const rest = newOctokit(token);
   const response = await withRateLimitRetry(() => rest.users.getAuthenticated());
   const scopesHeader = (response.headers as Record<string, string | undefined>)['x-oauth-scopes'];
   const plan = (response.data as { plan?: { name?: string } }).plan?.name;
@@ -74,7 +80,7 @@ export async function authIdentity(token: string): Promise<TokenIdentity> {
 }
 
 export function buildGitHubApi(options: OctokitApiOptions): GitHubApi {
-  const rest = new Octokit(octokitOptions(options.mainToken));
+  const rest = newOctokit(options.mainToken);
 
   return {
     async findRepo(owner, name): Promise<RepoInfo | null> {
@@ -145,7 +151,7 @@ export function buildGitHubApi(options: OctokitApiOptions): GitHubApi {
     async acceptInvitationAs(login, invitationId) {
       const token = options.acceptorTokens.get(login);
       if (token === undefined) throw new Error(`no acceptor token for login ${login}`);
-      const acceptor = new Octokit(octokitOptions(token));
+      const acceptor = newOctokit(token);
       await withRateLimitRetry(() => acceptor.repos.acceptInvitationForAuthenticatedUser({ invitation_id: invitationId }));
     },
 
