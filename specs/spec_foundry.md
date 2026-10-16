@@ -63,7 +63,7 @@ Upsert the project's entry in `<foundry-var>/projects.json` (`spec_foundry-data.
 
 ### Run close
 
-`run_finished` ends the event trail; the log's path prints. The trail and the registry live in Foundry's own runtime `var/`; execution by-products are runtime data.
+`run_finished` ends the event trail; the log's path prints once, on stdout. The trail and the registry live in Foundry's own runtime `var/`; execution by-products are runtime data.
 
 ## Idempotency and resume
 

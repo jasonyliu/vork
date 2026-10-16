@@ -61,8 +61,10 @@ function parseFlags(args: string[]): Flags {
 }
 
 // Interactive bundle capture: the mission core; visibility defaults to private,
-// ruleset to standard.
+// ruleset to standard. Needs a terminal: with stdin a pipe or a file the
+// prompts never settle, so that case exits 2 and points at --bundle.
 async function promptBundle(): Promise<Bundle> {
+  if (!process.stdin.isTTY) throw usageError('--interactive needs a terminal; pass --bundle <path> instead');
   const rl = createInterface({ input: process.stdin, output: process.stderr });
   try {
     const raw: Record<string, unknown> = {};
