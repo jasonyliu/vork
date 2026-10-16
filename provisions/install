@@ -136,7 +136,7 @@ elif [ $CHECK -eq 1 ]; then
   say missing "$VORK/apps/foundry/node_modules (dependencies)"; DRIFT=1
 else
   (cd "$VORK/apps/foundry" && npm ci --no-audit --no-fund >/dev/null) || fail_write "$VORK/apps/foundry/node_modules (npm ci)"
-  say installed "$VORK/apps/foundry/node_modules (npm ci)"
+  say updated "$VORK/apps/foundry/node_modules (npm ci)"
 fi
 
 # --- 4. rule ------------------------------------------------------------------

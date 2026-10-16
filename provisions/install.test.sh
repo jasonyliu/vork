@@ -40,7 +40,7 @@ assert "report names the surface and root" "[[ \"$out\" == *'installed claude fr
 
 echo "second run, no flags"
 out="$("$INSTALL" --surface claude)"
-assert "every path unchanged" "! grep -qE '^(updated|created|installed) ' <<<\"$out\""
+assert "every path unchanged" "! grep -qE '^(updated|created) ' <<<\"$out\" && [ \$(grep -cE '^installed ' <<<\"$out\") -eq 1 ]"
 assert ".env keeps its root without --projects-root" "grep -q '^FOUNDRY_PROJECT_STORAGE_PATH=$WORK/projects$' '$ENV'"
 
 echo "--check"
