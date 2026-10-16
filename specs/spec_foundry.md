@@ -27,8 +27,8 @@ Every check passes before the first mutation:
 
 - Load the environment (`spec_foundry-interface.md §Environment`); a missing required var exits 2.
 - Validate the bundle per `spec_foundry-interface.md §Input bundle`.
-- Load the owner token from `FOUNDRY_OWNER_TOKEN_PATH`; its `GET /user` login is the owner and its `plan.name` the owner's plan; verify scopes (`repo` on a classic token; a fine-grained token exposes none and passes). Load and authenticate the work token from `FOUNDRY_WORK_TOKEN_PATH`, the work account every session commits and pushes with.
-- Plan gate: `plan.name` is `free`, `visibility` is `private` and `FOUNDRY_RULESET` is `standard` → exit 3: "a free plan takes no branch protection on a private repository: set visibility public, or FOUNDRY_RULESET=none". Every other combination passes. A response without `plan` records the plan as `unknown` and passes; a ruleset the plan refuses then fails at its own stage, exit 4, named.
+- Load the owner token from `FOUNDRY_OWNER_TOKEN_PATH`; its `GET /user` login is the owner and its `plan.name` the owner's plan; verify scopes (`repo` on a classic token; a fine-grained token exposes none and passes). Load and authenticate the Vork token from `FOUNDRY_VORK_TOKEN_PATH`, the Vork account every session commits and pushes with.
+- Plan gate: `plan.name` is `free`, the bundle's `visibility` is `private` and its `ruleset` is `standard` → exit 3: "a free plan takes no branch protection on a private repository: set visibility public, or ruleset none, in the bundle". Every other combination passes. A response without `plan` records the plan as `unknown` and passes; a ruleset the plan refuses then fails at its own stage, exit 4, named.
 - Repo name: exists under the owner → resume case, continue; exists under a foreign owner → abort.
 - Storage path exists and is writable; `<project_key>/` may pre-exist only when it is a prior run of the same project: its `main/` clone's git origin points at the owner's `<project_key>` repo. Anything else at that path aborts.
 - Startup lint on the skeleton (`spec_foundry-data.md §Verification`).
@@ -39,7 +39,7 @@ Sub-steps in order, each streaming its resource event; artifact shapes per `spec
 
 - Create the repo (REST `POST /user/repos` under the owner token, `private` per the bundle's `visibility`), then PATCH settings.
 - Upsert the issue-queue labels; GitHub's auto-generated defaults stand; Foundry adds.
-- Grant: probe repo membership for the work account → invite `push` under the owner token → accept with the work token. A failed grant records `failed` and continues.
+- Grant: probe repo membership for the Vork account → invite `push` under the owner token → accept with the Vork token. A failed grant records `failed` and continues.
 - Failure anywhere here: the event trail carries the completed sub-steps plus `run_failed`; exit 4.
 
 ### Local render + clone
@@ -51,15 +51,15 @@ Sub-steps in order, each streaming its resource event; artifact shapes per `spec
 
 - Identity for the scaffold commit is the owner's: `user.name = <owner_login>`, `user.email = <owner_login>@<project_key>.localhost`; `git add -A`; message `Foundry: initial project scaffold`, the repository's first commit; push `main` under the owner token (the push creates the branch and lands before any ruleset, the lockout guard); a rejection from an operator-created ruleset is reported by name, exit 5.
 - Create `dev` at the scaffold commit (`POST git/refs`), so both standing branches exist before protection.
-- Re-bind `main/` to the work identity (`FOUNDRY_WORK_TOKEN_PATH`'s login): from here on `main/` is the working clone (`rules/PROJECT.md §Storage`); the owner's identity leaves with the push.
+- Re-bind `main/` to the Vork account's commit identity, `user.name = FOUNDRY_VORK_NAME`, `user.email = FOUNDRY_VORK_EMAIL`: from here on `main/` is the working clone (`rules/PROJECT.md §Storage`) and every commit made from it carries that identity; the owner's identity leaves with the push.
 
 ### Rulesets
 
-Apply `protect-main` and `protect-dev` per the committed shapes (skipped wholly when `FOUNDRY_RULESET=none`); an existing same-name ruleset converges by delta, recording it.
+Apply `protect-main` and `protect-dev` per the committed shapes (skipped wholly when the bundle's `ruleset` is `none`); an existing same-name ruleset converges by delta, recording it.
 
 ### Registry entry
 
-Upsert the project's entry in `<foundry-var>/projects.json` (`spec_foundry-data.md §Registry`): key, name, owner, repository, visibility, ruleset, owner plan, path, `founded_at` (kept from the first run), `updated_at` and `run_id` (this run). Written whole and atomically (temp file, rename); a `registry` resource event records `created` or `updated`. The registry is the machine's inventory of founded projects and the seed for anything built on it later; nothing in the kit reads it except `foundry list`.
+Upsert the project's entry in `<foundry-var>/projects.json` (`spec_foundry-data.md §Registry`): key, name, owner, repository, visibility, ruleset, owner plan, the Vork account's login and commit identity, path, `founded_at` (kept from the first run), `updated_at` and `run_id` (this run). Written whole and atomically (temp file, rename); a `registry` resource event records `created` or `updated`. The registry is the machine's inventory of founded projects and the seed for anything built on it later; nothing in the kit reads it except `foundry list`.
 
 ### Run close
 
@@ -94,7 +94,7 @@ A failed run re-runs and resumes, whatever stage it died at; resumption is state
 Opens a milestone, in the project's `main/` clone:
 
 - `git fetch origin`; `docs/milestones/milestone_v<YYYY.MM.DD>_<slug>/` present on `origin/dev` or locally → print its path and exit 0 without creating.
-- Create the lane `feature/milestone_v<YYYY.MM.DD>_<slug>/draft` from `origin/dev`; render `milestone.md` from the canonical template: title, slug, `Status: Active (started <date>)`, Scope seeded with `--note`, every other section left as the template's placeholder; commit under the work identity (`kickoff: open milestone_v<date>_<slug>`); push the lane.
+- Create the lane `feature/milestone_v<YYYY.MM.DD>_<slug>/draft` from `origin/dev`; render `milestone.md` from the canonical template: title, slug, `Status: Active (started <date>)`, Scope seeded with `--note`, every other section left as the template's placeholder; commit under the clone's bound identity (`kickoff: open milestone_v<date>_<slug>`); push the lane with the Vork token.
 - Print the lane and the record path, exit 0; git or filesystem failure exits 5 naming the act.
 
 The Draft is then settled in conversation on that lane; its merge to `dev` marks the milestone Active in the charter. Kickoff leaves the registry untouched.
@@ -104,7 +104,7 @@ The Draft is then settled in conversation on that lane; its merge to `dev` marks
 - Fresh bootstrap: the artifact set equals the `spec_foundry-data.md` inventory exactly, and only it; the registry holds one entry for the key; the run event trail under Foundry's var ends `run_finished`.
 - Kill the run after the repo step → re-run completes the remainder without disturbing existing artifacts; the two event trails together cover every resource exactly once as created-or-skipped; the registry entry is one, `updated`, `founded_at` from the first run.
 - Manual label-color change → re-run completes, the event trail records the drift, live label untouched.
-- Plan gate: a mocked `plan.name: free` with `visibility: private` and `FOUNDRY_RULESET=standard` exits 3 before any API mutation; the same with `visibility: public`, or with `FOUNDRY_RULESET=none`, passes preflight; a `pro` plan passes every combination.
+- Plan gate: a mocked `plan.name: free` with `visibility: private` and `ruleset: standard` exits 3 before any API mutation; the same with `visibility: public`, or with `ruleset: none`, passes preflight; a `pro` plan passes every combination.
 - `--dry-run` leaves GitHub, the storage path and the registry untouched.
 - `verify --against <vork clone>` exits 0; deleting one canonical template from a copy exits 7 naming the path.
 - `list` after two foundings prints two rows; on a fresh clone prints the empty message.

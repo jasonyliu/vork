@@ -47,3 +47,5 @@ Rulings at Draft (2026-10-14): the database registry leaves Foundry whole and a 
 | `spec_foundry-data.md` | edited | §Registry (`projects.json` shape); board artifacts and events gone; default labels named |
 | `spec_foundry-interface.md` | edited | plan read needs `read:user`; unknown-plan path through the ruleset stage stated in the matrix |
 | `spec_kit.md` | edited | Claude surface lands the rule verbatim, loaded at launch; the frontmatter mechanism dropped after the probe showed path-scoped rules are project-relative |
+| `spec_kit.md` | edited | installer flags `--owner-token --vork-token --name --email`, required on the first install; the Vork account named |
+| `spec_foundry.md`, `spec_foundry-interface.md`, `spec_foundry-data.md` | edited | the Vork account (renamed from the work account); commit identity from `FOUNDRY_VORK_NAME`/`_EMAIL`; `ruleset` a bundle field, `FOUNDRY_RULESET` gone; registry entry carries the Vork identity |

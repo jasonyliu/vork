@@ -1,13 +1,14 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { usageError } from './errors.js';
-import type { Bundle, Visibility } from './types.js';
+import type { Bundle, Ruleset, Visibility } from './types.js';
 
 // Input-bundle validation per `spec_foundry-interface.md §Input bundle`: each
-// required-field omission, a malformed project_key and an unknown visibility
-// exit 2 naming the field.
+// required-field omission, a malformed project_key, an unknown visibility and
+// an unknown ruleset exit 2 naming the field.
 
 export const PROJECT_KEY_PATTERN = /^[a-z][a-z0-9_]*$/;
 export const VISIBILITIES: readonly Visibility[] = ['private', 'public'];
+export const RULESETS: readonly Ruleset[] = ['standard', 'none'];
 
 const REQUIRED_STRING_FIELDS = ['project_name', 'project_key', 'mission', 'description', 'scope'] as const;
 const RETIRED_FIELDS = ['channel', 'specialists', 'team'] as const;
@@ -19,7 +20,7 @@ export function validateBundle(raw: unknown): Bundle {
   const source = raw as Record<string, unknown>;
   for (const field of RETIRED_FIELDS) {
     if (source[field] !== undefined) {
-      throw usageError(`bundle field retired: ${field} — the bundle carries the mission core alone (project_name, project_key, mission, description, scope) and visibility`);
+      throw usageError(`bundle field retired: ${field} — the bundle carries the mission core alone (project_name, project_key, mission, description, scope), visibility and ruleset`);
     }
   }
   const core: Partial<Record<(typeof REQUIRED_STRING_FIELDS)[number], string>> = {};
@@ -35,7 +36,11 @@ export function validateBundle(raw: unknown): Bundle {
   if (typeof visibility !== 'string' || !VISIBILITIES.includes(visibility as Visibility)) {
     throw usageError(`bundle field malformed: visibility must be "private" or "public" (got ${JSON.stringify(visibility)})`);
   }
-  return { ...(core as Required<typeof core>), visibility: visibility as Visibility };
+  const ruleset = source['ruleset'] ?? 'standard';
+  if (typeof ruleset !== 'string' || !RULESETS.includes(ruleset as Ruleset)) {
+    throw usageError(`bundle field malformed: ruleset must be "standard" or "none" (got ${JSON.stringify(ruleset)})`);
+  }
+  return { ...(core as Required<typeof core>), visibility: visibility as Visibility, ruleset: ruleset as Ruleset };
 }
 
 export function loadBundle(path: string): Bundle {

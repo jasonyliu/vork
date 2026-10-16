@@ -6,7 +6,7 @@ import type { GitOps } from './gitops.js';
 // Kickoff (`spec_foundry.md §Kickoff`): the milestone record opened for the
 // Principal and the agent to settle in conversation. In the project's main/
 // clone: lane off origin/dev, milestone.md from the canonical template,
-// committed under the work identity, pushed.
+// committed under the clone's bound identity (the Vork account's), pushed.
 
 export const MILESTONE_SLUG_PATTERN = /^[a-z][a-z0-9-]*$/;
 
@@ -38,7 +38,7 @@ export interface OpenMilestoneInput {
   date: Date;
   note?: string;
   template: string; // the canonical milestone template body
-  workToken: string; // fetch + push under the work identity
+  workToken: string; // fetch + push with the Vork account's token
 }
 
 export interface OpenMilestoneResult {

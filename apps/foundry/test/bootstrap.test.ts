@@ -17,7 +17,7 @@ function context(api: FakeGitHubApi, overrides: Partial<BootstrapContext> = {}):
     ownerLogin: 'owner-login',
     projectKey: 'throwaway',
     visibility: 'private',
-    workLogin: 'work-login',
+    vorkLogin: 'vork-login',
     ...overrides
   };
 }
@@ -46,7 +46,7 @@ describe('committed artifact shapes', () => {
 });
 
 describe('runGitHubBootstrap on a fresh owner', () => {
-  it('produces exactly repo, defect label, work grant', async () => {
+  it('produces exactly repo, defect label, the Vork account grant', async () => {
     const api = new FakeGitHubApi();
     const result = await runGitHubBootstrap(context(api));
 
@@ -57,7 +57,7 @@ describe('runGitHubBootstrap on a fresh owner', () => {
     expect(repoRecord.visibility).toBe('private');
     expect(repoRecord.created_or_skipped).toBe('created');
     const collaboratorRecords = result.records.filter((r): r is CollaboratorRecord => r.resource === 'collaborator');
-    expect(collaboratorRecords.map((r) => r.github_login)).toEqual(['work-login']);
+    expect(collaboratorRecords.map((r) => r.github_login)).toEqual(['vork-login']);
     expect(collaboratorRecords[0]!.repo_invite_status).toBe('accepted');
     expect(api.acceptedInvitations.length).toBe(1);
     const resources = result.records.map((r) => r.resource);

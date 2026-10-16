@@ -24,6 +24,7 @@ Identifiers:
 
 - `<surface>`: `claude` | `codex`; names the manual folder, the installer's `--surface` value, and the `provisions/<surface>/` folder where the surface needs more than the rule and skills.
 - `<projects-root>`: the storage root, parent of every `<project_key>/` (`rules/PROJECT.md §Storage`); one value per machine, chosen at install, written into Foundry's environment and into the Codex pointer block.
+- The Vork account: the second GitHub account, the one every agent session commits and pushes as (`rules/PROJECT.md §Identity`); its token path and its commit identity are install-time inputs written into Foundry's environment.
 - `<vork>`: the Vork clone the installer belongs to, resolved from the script's own location. The clone at a release tag is the deployed release; the installer is how it reaches a surface.
 - Managed-block markers: `<!-- vork:start v=<sha> source=<tag> deployed=<YYYY-MM-DD> -->` … `<!-- vork:end -->`. Content between the markers is the kit's; content outside is the operator's and is never touched.
 
@@ -52,21 +53,23 @@ Projects under `{{projects_root}}/` follow the Vork convention. When a session t
 ## Install
 
 ```text
-provisions/install --surface <surface> [--projects-root <path>] [--check]
+provisions/install --surface <surface> [--projects-root <path>]
+                   [--owner-token <path>] [--vork-token <path>] [--name <text>] [--email <text>]
+                   [--check]
 ```
 
-The deployment of Vork to a surface. The operator runs it after the first clone and after every `git checkout v<YYYY.MM.DD>` of a newer release; each surface's manual under `docs/deployments/` has this command as its whole Mechanism, `--check` as its Smoke, and "check out the previous tag and install again" as its Rollback. Bash, POSIX tools and `git` alone. Convergent and idempotent: every act makes destination equal source, decided by content comparison; the stamp in a managed block is testimony, never the verdict. The installer writes named files and deletes nothing. Destinations resolve under `$HOME`; the installer's own tests run it with `HOME` set to a scratch directory.
+The deployment of Vork to a surface. The operator runs it after the first clone, again for each further surface, and after every `git checkout v<YYYY.MM.DD>` of a newer release; each surface's manual under `docs/deployments/` has this command as its whole Mechanism, `--check` as its Smoke, and "check out the previous tag and install again" as its Rollback. Bash, POSIX tools and `git` alone. Convergent and idempotent: every act makes destination equal source, decided by content comparison; the stamp in a managed block is testimony, never the verdict. The installer writes named files and deletes nothing. Destinations resolve under `$HOME`; the installer's own tests run it with `HOME` set to a scratch directory.
 
 Acts, in order:
 
 1. **Root**: resolve `<projects-root>` (flag, else `~/Vork/projects`, the suggested default); expand `~` to an absolute path; `mkdir -p` it.
-2. **Foundry environment**: `<vork>/apps/foundry/.env` absent → copy `.env.example`; then set `FOUNDRY_PROJECT_STORAGE_PATH=<projects-root>` (replace the line, or append it). Token paths stay the operator's to fill; the installer reports each one that still reads the example's placeholder.
+2. **Foundry environment**: `<vork>/apps/foundry/.env` is the installer's to write. Absent (the machine's first install): `--owner-token`, `--vork-token`, `--name` and `--email` are required, exit 2 naming the missing one; the file is created from `.env.example` with `FOUNDRY_OWNER_TOKEN_PATH`, `FOUNDRY_VORK_TOKEN_PATH`, `FOUNDRY_VORK_NAME`, `FOUNDRY_VORK_EMAIL` and `FOUNDRY_PROJECT_STORAGE_PATH` set. Present: the four are optional, and each one given replaces its line (`--projects-root` likewise); lines left alone stand. The installer reports any line that still reads a `<placeholder>`.
 3. **Foundry dependencies**: `<vork>/apps/foundry/node_modules/` absent → `npm ci` there; the report names it.
 4. **Rule**: `rules/PROJECT.md` verbatim to the surface's rules directory; compare, copy atomically (`.tmp.$$` then `mv`).
 5. **Skills**: for every file under `<vork>/skills/`, compare, copy to the surface's skills directory at the same relative path. Files the surface already holds under other skill names stand.
 6. **Pointer block** (`codex` alone): render; a block present with equal content → unchanged; present and different → replaced between its markers, the rest of the file byte-preserved; absent → appended after a blank line (file created when missing).
 
-`--check` performs no write: each act prints `unchanged | drifted | missing` per path, step 2 prints the root the environment holds beside the requested one, step 3 prints whether dependencies are present, and the exit code is 1 on any drift, 0 when clean.
+`--check` performs no write: each act prints `unchanged | drifted | missing` per path, step 2 prints each environment line beside the flag given for it (values of token paths, never of tokens), step 3 prints whether dependencies are present, and the exit code is 1 on any drift, 0 when clean.
 
 Output: one line per path, `<verdict> <path>`; last line `installed <surface> from <vork> @ <sha> (<tag>) root <projects-root>` or `check: clean | check: DRIFT`.
 
@@ -76,27 +79,28 @@ Exit codes:
 |---:|---|
 | 0 | success, or `--check` clean |
 | 1 | `--check` found drift |
-| 2 | usage: unknown flag, unknown surface, a surface file carrying an unknown variable, the script outside a Vork clone (`rules/PROJECT.md` absent beside it) |
+| 2 | usage: unknown flag, unknown surface, a required first-install flag missing, a surface file carrying an unknown variable, the script outside a Vork clone (`rules/PROJECT.md` absent beside it) |
 | 5 | a write failed (named path) |
 
 ## Run surface
 
 Foundry runs from the Vork clone (`<vork>/apps/foundry/bin/foundry`) at the release tag the operator checked out; `.env` and `var/` sit beside it and survive checkouts (gitignored). The operator's sequence, which the README states in this order:
 
-1. Two GitHub accounts: the owner's (the operator's own) and one work account; a token for each, saved as a file (`rules/PROJECT.md §Identity`). On a free plan a private repository takes no branch protection, so the operator chooses public repositories or `FOUNDRY_RULESET=none` (`spec_foundry.md §Preflight`).
+1. Two GitHub accounts: the owner's (the operator's own) and the Vork account; a token for each, saved as a file (`rules/PROJECT.md §Identity`). On a free plan a private repository takes no branch protection, so the operator founds public repositories or sets `ruleset: none` in the bundle (`spec_foundry.md §Preflight`).
 2. Node 22 or later, `git`, one harness.
 3. `git clone` Vork, `git checkout v<YYYY.MM.DD>`.
-4. `provisions/install --surface <surface> [--projects-root <path>]`; fill the two token paths in `apps/foundry/.env`.
-5. Write a bundle; `foundry bootstrap --bundle <path> --dry-run`; then without `--dry-run`.
+4. `provisions/install --surface <surface> --owner-token <path> --vork-token <path> --name <text> --email <text> [--projects-root <path>]`: the first install writes `apps/foundry/.env` whole; nothing is edited by hand.
+5. Write a bundle (the five mission fields, `visibility`, `ruleset`); `foundry bootstrap --bundle <path> --dry-run`; then without `--dry-run`.
 6. Open a session in the harness and start the founded project's charter conversation; the rule loads the moment the session touches the project.
 
-A stable command path is a symlink: `ln -s <vork>/apps/foundry/bin/foundry ~/.local/bin/foundry`; the entrypoint resolves its own directory.
+Steps 1 to 4 happen once per machine, step 4 again per further surface; step 5 repeats per project. A stable command path is a symlink: `ln -s <vork>/apps/foundry/bin/foundry ~/.local/bin/foundry`; the entrypoint resolves its own directory.
 
 ## Verification
 
 - `foundry verify --against <vork clone>` exits 0 at every release.
-- `install --surface claude` on a scratch `HOME`: `.claude/rules/PROJECT.md` byte-equals `rules/PROJECT.md`; `.claude/skills/{foundry,release,techspec}/` byte-equal the kit's; `apps/foundry/.env` exists and carries the root; a second run prints `unchanged` for every path; `--check` exits 0; editing one landed file makes `--check` exit 1 naming it.
+- `install --surface claude` on a scratch `HOME` with the four first-install flags: `.claude/rules/PROJECT.md` byte-equals `rules/PROJECT.md`; `.claude/skills/{foundry,release,techspec}/` byte-equal the kit's; `apps/foundry/.env` exists and carries the root, both token paths, the name and the email; a second run prints `unchanged` for every path; `--check` exits 0; editing one landed file makes `--check` exit 1 naming it.
 - `install --surface codex` on a scratch `HOME`: `.codex/rules/PROJECT.md` byte-equal; the pointer block present once in `.codex/AGENTS.md` with the root rendered; an existing `AGENTS.md` keeps every byte outside the markers; a second run leaves the file byte-identical; a changed block is replaced in place.
-- `--projects-root` given twice with different values: the second run rewrites the pointer block and the `.env` line, and `--check` with the first value reports drift.
+- A first install without one of the four flags exits 2 naming it and writes nothing; `install --surface codex` on a machine already installed for `claude` needs no flags and leaves `.env` byte-identical.
+- `--projects-root` given twice with different values: the second run rewrites the pointer block and the `.env` line, and `--check` with the first value reports drift; the same for `--name` or `--email` given again.
 - A Claude Code session opened anywhere on the machine after the install shows `PROJECT.md` loaded (`/context`).
 - Operator proof (milestone verification): a founding from a clean account pair on the README alone reaches the charter conversation; the consumer project re-points its own deployment to the tag.

@@ -22,7 +22,7 @@ export interface PreflightResult {
   ownerLogin: string;
   ownerNodeId: string;
   ownerPlan: string; // `plan.name`, or `unknown` when the token's scope withholds it
-  work: ResolvedIdentity; // the work account
+  vork: ResolvedIdentity; // the Vork account
   projectDir: string;
   repoPreExists: boolean;
 }
@@ -30,7 +30,7 @@ export interface PreflightResult {
 const REQUIRED_CLASSIC_SCOPES = ['repo'];
 
 export const PLAN_GATE_MESSAGE =
-  'a free plan takes no branch protection on a private repository: set visibility public, or FOUNDRY_RULESET=none';
+  'a free plan takes no branch protection on a private repository: set visibility public, or ruleset none, in the bundle';
 
 function verifyScopes(identity: TokenIdentity, subject: string): void {
   if (identity.scopes === null) return; // fine-grained token — scopes stay unexposed
@@ -44,7 +44,7 @@ function verifyScopes(identity: TokenIdentity, subject: string): void {
 // The plan matrix (`spec_foundry-interface.md §Environment`): one refused
 // combination, free + private + standard. An unknown plan passes; a ruleset the
 // plan refuses then fails at its own stage, named.
-export function planGate(plan: string, visibility: Bundle['visibility'], ruleset: FoundryEnv['ruleset']): void {
+export function planGate(plan: string, visibility: Bundle['visibility'], ruleset: Bundle['ruleset']): void {
   if (plan === 'free' && visibility === 'private' && ruleset === 'standard') {
     throw preflightError(PLAN_GATE_MESSAGE);
   }
@@ -63,15 +63,15 @@ export async function runPreflight(
   });
   verifyScopes(owner, 'owner token');
   const ownerPlan = owner.plan ?? 'unknown';
-  planGate(ownerPlan, bundle.visibility, env.ruleset);
+  planGate(ownerPlan, bundle.visibility, bundle.ruleset);
 
-  // work token — the work account: accepts the invite, holds main/'s bound identity
-  const workToken = readToken(env.work_token_path);
-  const workIdentity = await deps.authIdentity(workToken).catch((error: unknown) => {
-    throw preflightError(`work token failed to authenticate (${env.work_token_path}): ${error instanceof Error ? error.message : String(error)}`);
+  // Vork token — the Vork account: accepts the invite, holds main/'s bound identity
+  const vorkToken = readToken(env.vork_token_path);
+  const vorkIdentity = await deps.authIdentity(vorkToken).catch((error: unknown) => {
+    throw preflightError(`Vork token failed to authenticate (${env.vork_token_path}): ${error instanceof Error ? error.message : String(error)}`);
   });
-  const work: ResolvedIdentity = { tokenPath: env.work_token_path, login: workIdentity.login, nodeId: workIdentity.nodeId };
-  const acceptorTokens = new Map<string, string>([[work.login, workToken]]);
+  const vork: ResolvedIdentity = { tokenPath: env.vork_token_path, login: vorkIdentity.login, nodeId: vorkIdentity.nodeId };
+  const acceptorTokens = new Map<string, string>([[vork.login, vorkToken]]);
 
   const api = deps.buildApi(ownerToken, acceptorTokens);
 
@@ -110,7 +110,7 @@ export async function runPreflight(
     ownerLogin: owner.login,
     ownerNodeId: owner.nodeId,
     ownerPlan,
-    work,
+    vork,
     projectDir,
     repoPreExists: existingRepo !== null
   };

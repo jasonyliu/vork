@@ -8,8 +8,8 @@ import type { FoundryEnv } from './types.js';
 
 // Environment per `spec_foundry-interface.md §Environment`: `apps/foundry/.env`
 // beside the app (loaded from the app directory, so `bin/foundry` runs from
-// anywhere). Per-run flags override the environment. The storage root carries
-// no built-in default: `provisions/install` writes it.
+// anywhere). Per-run flags override the environment. Every variable is required
+// and carries no built-in default: `provisions/install` writes them.
 
 export const APP_DIR = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -39,18 +39,12 @@ function required(source: NodeJS.ProcessEnv, name: string): string {
   return value.trim();
 }
 
-function optional(source: NodeJS.ProcessEnv, name: string): string | undefined {
-  const value = source[name];
-  return value === undefined || value.trim() === '' ? undefined : value.trim();
-}
-
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): FoundryEnv {
-  const ruleset = optional(source, 'FOUNDRY_RULESET') ?? 'standard';
-  if (ruleset !== 'standard' && ruleset !== 'none') throw usageError('env var invalid: FOUNDRY_RULESET must be "standard" or "none"');
   return {
     owner_token_path: required(source, 'FOUNDRY_OWNER_TOKEN_PATH'),
-    work_token_path: required(source, 'FOUNDRY_WORK_TOKEN_PATH'),
-    ruleset,
+    vork_token_path: required(source, 'FOUNDRY_VORK_TOKEN_PATH'),
+    vork_name: required(source, 'FOUNDRY_VORK_NAME'),
+    vork_email: required(source, 'FOUNDRY_VORK_EMAIL'),
     project_storage_path: required(source, 'FOUNDRY_PROJECT_STORAGE_PATH')
   };
 }

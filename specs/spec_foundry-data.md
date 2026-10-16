@@ -6,7 +6,7 @@ Foundry's durable outputs are GitHub artifacts, a rendered file tree, one entry 
 
 ## Identifier system
 
-- `project_key`: `[a-z][a-z0-9_]*`; names the repo, the local project folder `<storage-root>/<project_key>/`, the registry entry, and the clone git email domain (`<login>@<project_key>.localhost`).
+- `project_key`: `[a-z][a-z0-9_]*`; names the repo, the local project folder `<storage-root>/<project_key>/`, and the registry entry. The scaffold commit's owner identity is `<owner_login>` with `<owner_login>@<project_key>.localhost`; the bound identity after it is the Vork account's from the environment.
 - `project_name`: human title, rendered into the charter and the README.
 - Branch names, milestone folder naming: owned by the project convention (`rules/PROJECT.md`); Foundry consumes them as defined.
 - Foundry var: `apps/foundry/var/` under the Vork clone, gitignored; `FOUNDRY_VAR` relocates it. Run event log: `<foundry-var>/runs/<project_key>/run_<YYYYMMDDTHHMMSSZ>_<run_id first 8 hex>.jsonl`, unique by construction. Dry-run scratch: `<foundry-var>/dry-run/<project_key>_<YYYYMMDDTHHMMSSZ>/`. Registry: `<foundry-var>/projects.json`.
@@ -53,7 +53,7 @@ The template set has one home, the Vork clone's own `docs/conventions/templates/
 
 Both rulesets gain `required_status_checks` when the project's CI lands; until then pull requests merge on review alone, since a required check before any workflow exists would deadlock every PR. A free plan applies rulesets to public repositories alone (`spec_foundry-interface.md §Environment`, plan matrix).
 
-**Collaborator grant**: the work account (`FOUNDRY_WORK_TOKEN_PATH`'s login): repo `push`, invited by the owner and accepted in-run with the work token. Two accounts total: the owner's, reserved for the Principal's acts, and the work account every session acts through.
+**Collaborator grant**: the Vork account (`FOUNDRY_VORK_TOKEN_PATH`'s login): repo `push`, invited by the owner and accepted in-run with the Vork token. Two accounts total: the owner's, reserved for the Principal's acts, and the Vork account every session acts through.
 
 ## Registry
 
@@ -69,6 +69,9 @@ Both rulesets gain `required_status_checks` when the project's CI lands; until t
       "visibility": "private | public",
       "ruleset": "standard | none",
       "owner_plan": "<plan.name from GET /user, or unknown>",
+      "vork_login": "<the Vork account's login>",
+      "vork_name": "<FOUNDRY_VORK_NAME>",
+      "vork_email": "<FOUNDRY_VORK_EMAIL>",
       "path": "<storage-root>/<project_key>",
       "founded_at": "<ISO-8601, first run>",
       "updated_at": "<ISO-8601, this run>",
