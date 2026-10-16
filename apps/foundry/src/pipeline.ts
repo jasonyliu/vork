@@ -187,6 +187,5 @@ export async function runBootstrapPipeline(options: PipelineOptions, deps: Pipel
   }, localError);
 
   log.emit('run_finished', { resources: log.records.length });
-  deps.log(log.path);
   return { exitCode: EXIT.SUCCESS, eventsPath: log.path, registry };
 }

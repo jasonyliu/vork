@@ -42,7 +42,7 @@ The template set has one home, the Vork clone's own `docs/conventions/templates/
 
 **Repository**: name `project_key`, visibility per the bundle (`private` by default); auto-init off (the scaffold is the first commit); issues on, projects, wiki and discussions off; merge method: merge commits alone (convention merges are `--no-ff`). Standing branches `main` (the scaffold commit, the repository's first) and `dev` (created at it). The repository's issues are the project's bugs, enhancements and defects queue (`rules/PROJECT.md §GitHub`).
 
-**Labels**: GitHub's auto-generated defaults stand (`bug`, `enhancement`, `documentation`, `duplicate`, `good first issue`, `help wanted`, `invalid`, `question`, `wontfix`); Foundry adds exactly one, `defect` (`#e99695`), completing the queue vocabulary beside the stock `bug` and `enhancement`. Inventory: `apps/foundry/assets/labels.json`.
+**Labels**: GitHub's auto-generated defaults stand, whatever set GitHub ships at creation time (`bug` and `enhancement` among them); Foundry adds exactly one, `defect` (`#e99695`), completing the queue vocabulary beside those two. Inventory: `apps/foundry/assets/labels.json`.
 
 **Rulesets**: committed payload shapes under `apps/foundry/assets/rulesets/`:
 

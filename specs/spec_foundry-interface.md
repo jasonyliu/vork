@@ -12,7 +12,7 @@ foundry kickoff --project <project_key> --milestone <slug> [--title <text>] [--n
 foundry list
 ```
 
-- `--bundle` and `--interactive` are mutually exclusive; interactive prompts for the bundle fields and writes the bundle file beside the run for replay.
+- `--bundle` and `--interactive` are mutually exclusive; interactive prompts for the bundle fields on a terminal and writes the bundle file beside the run for replay; with stdin a pipe or a file it exits 2 and points at `--bundle`.
 - `--dry-run`: preflight + render to a scratch path under Foundry's var; GitHub, the storage path and the registry stay untouched.
 - `verify --against`: structural check of an existing tree against the canonical skeleton subset; content beyond the skeleton passes free. Without `--bundle` it checks only the bundle-independent subset.
 - `kickoff` opens the milestone record on its draft lane (`spec_foundry.md §Kickoff`). `--milestone` names the slug (`[a-z][a-z0-9-]*`); `--title` the human title (default: the slug); `--note` the settling pointer, seeded into the record's Scope. An existing folder of that name is reported instead of duplicated.
@@ -83,7 +83,7 @@ Plan matrix, enforced at preflight:
 
 ## Verification
 
-- Bundle validation: each required-field omission, each malformed `project_key`, each unknown `visibility` and each unknown `ruleset` exits 2 naming the field; an unreadable token path exits 3 naming it.
+- Bundle validation: each required-field omission, each malformed `project_key`, each unknown `visibility` and each unknown `ruleset` exits 2 naming the field; an unreadable token path exits 3 naming it; `--interactive` without a terminal exits 2 naming `--bundle`.
 - A missing required env var exits 2 naming it, each of the five.
 - Every row of the plan matrix behaves as stated against a mocked `GET /user`.
 - `--dry-run` performs zero GitHub mutations (assert by API-call recording), zero writes under the storage path, and leaves the registry byte-identical.

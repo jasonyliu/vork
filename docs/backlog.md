@@ -40,3 +40,4 @@ Release 2 treats every consumer of the kit as a deployment surface and ships two
 
 | Date | Item |
 |---|---|
+| 2026-10-16 | Foundry on the GitHub REST API version of 2022-11-28 — every request now names `2026-03-10`, `@octokit/rest` 22; shipped by `milestone_v2026.10.14_standalone-kit` the day it was added |
