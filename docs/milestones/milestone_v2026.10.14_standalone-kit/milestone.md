@@ -1,6 +1,6 @@
 # Milestone: Standalone kit (`milestone_v2026.10.14_standalone-kit`)
 
-**Status:** `Active (started 2026-10-14)`
+**Status:** `Completed (2026-10-16)` — release `v2026.10.16`, `docs/releases/release_v2026.10.16/release.md`
 
 ## Scope
 
