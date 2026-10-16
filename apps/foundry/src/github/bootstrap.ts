@@ -14,7 +14,7 @@ export interface BootstrapContext {
   ownerLogin: string;
   projectKey: string;
   visibility: Visibility;
-  workLogin: string; // the work account — the one grant
+  vorkLogin: string; // the Vork account — the one grant
 }
 
 export interface GitHubBootstrapResult {
@@ -60,11 +60,11 @@ export async function ensureLabels(ctx: BootstrapContext): Promise<LabelRecord[]
   return records;
 }
 
-// The work-account grant on the repository: invite `push`, accepted in-run with
-// the work token. A failure records `failed` and continues — the grant leaves
+// The Vork account's grant on the repository: invite `push`, accepted in-run with
+// the Vork token. A failure records `failed` and continues — the grant leaves
 // the bootstrap running.
 export async function ensureGrants(ctx: BootstrapContext): Promise<CollaboratorRecord[]> {
-  const login = ctx.workLogin;
+  const login = ctx.vorkLogin;
   let repoStatus: CollaboratorRecord['repo_invite_status'] = 'failed';
   let invitationId: number | undefined;
   let acceptedAt: string | undefined;
@@ -98,7 +98,7 @@ export async function ensureGrants(ctx: BootstrapContext): Promise<CollaboratorR
 }
 
 // Apply the committed shapes; an existing same-name ruleset converges by delta,
-// recorded. Skipped wholly when `FOUNDRY_RULESET=none`.
+// recorded. Skipped wholly when the bundle's ruleset is `none`.
 export async function ensureRulesets(ctx: BootstrapContext, mode: 'standard' | 'none'): Promise<RulesetRecord[]> {
   if (mode === 'none') return [];
   const existing = await ctx.api.listRulesets(ctx.ownerLogin, ctx.projectKey);

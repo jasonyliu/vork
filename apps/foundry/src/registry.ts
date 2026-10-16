@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { localError } from './errors.js';
-import type { Visibility } from './types.js';
+import type { Ruleset, Visibility } from './types.js';
 
 // The machine's project registry (`spec_foundry-data.md §Registry`):
 // `<foundry-var>/projects.json`, one entry per founded key, written whole and
@@ -13,8 +13,11 @@ export interface RegistryEntry {
   owner: string;
   repository: string;
   visibility: Visibility;
-  ruleset: 'standard' | 'none';
+  ruleset: Ruleset;
   owner_plan: string;
+  vork_login: string;
+  vork_name: string;
+  vork_email: string;
   path: string;
   founded_at: string;
   updated_at: string;

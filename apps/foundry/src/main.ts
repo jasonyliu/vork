@@ -60,7 +60,8 @@ function parseFlags(args: string[]): Flags {
   return flags;
 }
 
-// Interactive bundle capture: the mission core, visibility defaulting to private.
+// Interactive bundle capture: the mission core; visibility defaults to private,
+// ruleset to standard.
 async function promptBundle(): Promise<Bundle> {
   const rl = createInterface({ input: process.stdin, output: process.stderr });
   try {
@@ -70,6 +71,8 @@ async function promptBundle(): Promise<Bundle> {
     }
     const visibility = (await rl.question('visibility [private]: ')).trim();
     if (visibility !== '') raw['visibility'] = visibility;
+    const ruleset = (await rl.question('ruleset [standard]: ')).trim();
+    if (ruleset !== '') raw['ruleset'] = ruleset;
     return validateBundle(raw);
   } finally {
     rl.close();
@@ -123,7 +126,7 @@ function commandVerify(flags: Flags): number {
 
 // `foundry kickoff --project <key> --milestone <slug> [--title] [--note]`:
 // the milestone record opened on a draft lane in main/, committed under the
-// work identity, pushed (`spec_foundry.md §Kickoff`).
+// clone's bound identity, pushed (`spec_foundry.md §Kickoff`).
 async function commandKickoff(flags: Flags): Promise<number> {
   if (flags.project === undefined) throw usageError('kickoff requires --project <project_key>');
   if (flags.milestone === undefined) throw usageError('kickoff requires --milestone <slug>');
@@ -131,13 +134,13 @@ async function commandKickoff(flags: Flags): Promise<number> {
   const now = new Date();
   const folder = milestoneFolderName(now, flags.milestone);
   const title = flags.title ?? flags.milestone;
-  const workToken = readToken(env.work_token_path);
-  await authIdentity(workToken).catch((error: unknown) => {
-    throw new FoundryError(EXIT.PREFLIGHT, `work token failed to authenticate (${env.work_token_path}): ${error instanceof Error ? error.message : String(error)}`);
+  const vorkToken = readToken(env.vork_token_path);
+  await authIdentity(vorkToken).catch((error: unknown) => {
+    throw new FoundryError(EXIT.PREFLIGHT, `Vork token failed to authenticate (${env.vork_token_path}): ${error instanceof Error ? error.message : String(error)}`);
   });
   const mainDir = join(expandHome(flags.storagePath ?? env.project_storage_path), flags.project, 'main');
   const template = templateSource('milestone.md');
-  const result = openMilestoneRecord(buildGitOps(), { mainDir, folder, title, date: now, note: flags.note, template, workToken });
+  const result = openMilestoneRecord(buildGitOps(), { mainDir, folder, title, date: now, note: flags.note, template, workToken: vorkToken });
   process.stdout.write(`${result.lane} ${result.recordPath}\n`);
   if (result.existing) process.stderr.write(`milestone record already exists — reported as found\n`);
   return EXIT.SUCCESS;

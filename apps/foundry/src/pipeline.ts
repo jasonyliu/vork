@@ -47,7 +47,7 @@ export async function runBootstrapPipeline(options: PipelineOptions, deps: Pipel
   const runId = randomUUID();
 
   const preflight: PreflightResult = await runPreflight(bundle, env, options.storagePath, deps);
-  deps.log(`preflight passed — owner ${preflight.ownerLogin} (plan ${preflight.ownerPlan}), work account ${preflight.work.login}`);
+  deps.log(`preflight passed — owner ${preflight.ownerLogin} (plan ${preflight.ownerPlan}), Vork account ${preflight.vork.login}`);
 
   const values: VariableValues = {
     project_name: bundle.project_name,
@@ -78,7 +78,7 @@ export async function runBootstrapPipeline(options: PipelineOptions, deps: Pipel
     ownerLogin: preflight.ownerLogin,
     projectKey: bundle.project_key,
     visibility: bundle.visibility,
-    workLogin: preflight.work.login
+    vorkLogin: preflight.vork.login
   };
 
   // a stage failure lands in the event trail, then propagates its exit code
@@ -137,7 +137,8 @@ export async function runBootstrapPipeline(options: PipelineOptions, deps: Pipel
   }, localError);
 
   // scaffold commit under the owner's identity + push main + create dev, then
-  // hand main/ to the work identity — from here on it is the working clone
+  // hand main/ to the Vork account's commit identity — from here on it is the
+  // working clone
   await stage(async () => {
     deps.git.setIdentity(mainDir, preflight.ownerLogin, `${preflight.ownerLogin}@${bundle.project_key}.localhost`);
     const sha = deps.git.commitAll(mainDir, 'Foundry: initial project scaffold');
@@ -148,7 +149,7 @@ export async function runBootstrapPipeline(options: PipelineOptions, deps: Pipel
     const head = sha ?? (await ctx.api.getRef(preflight.ownerLogin, bundle.project_key, 'heads/main'));
     if (head === null) throw localError('main has no head after scaffold — the render produced zero commits and the remote holds zero refs');
     log.push(await ensureDevBranch(ctx, head));
-    deps.git.setIdentity(mainDir, preflight.work.login, `${preflight.work.login}@${bundle.project_key}.localhost`);
+    deps.git.setIdentity(mainDir, env.vork_name, env.vork_email);
     return head;
   }, localError);
 
@@ -156,11 +157,11 @@ export async function runBootstrapPipeline(options: PipelineOptions, deps: Pipel
   // plan gate could not foresee (plan unknown to preflight) is named with its
   // ways out; every other artifact already stands, so a re-run resumes.
   await stage(async () => {
-    log.push(...(await ensureRulesets(ctx, env.ruleset)));
+    log.push(...(await ensureRulesets(ctx, bundle.ruleset)));
     deps.log('rulesets done');
   }, (message) => {
     const hint = bundle.visibility === 'private' && preflight.ownerPlan !== 'pro'
-      ? ` — ${PLAN_GATE_MESSAGE}, then re-run: every other artifact is skipped as existing`
+      ? ` — ${PLAN_GATE_MESSAGE}; then re-run: every other artifact is skipped as existing`
       : '';
     return new FoundryError(EXIT.GITHUB, `rulesets failed: ${message}${hint}`);
   });
@@ -172,8 +173,11 @@ export async function runBootstrapPipeline(options: PipelineOptions, deps: Pipel
       owner: preflight.ownerLogin,
       repository: `https://github.com/${preflight.ownerLogin}/${bundle.project_key}`,
       visibility: bundle.visibility,
-      ruleset: env.ruleset,
+      ruleset: bundle.ruleset,
       owner_plan: preflight.ownerPlan,
+      vork_login: preflight.vork.login,
+      vork_name: env.vork_name,
+      vork_email: env.vork_email,
       path: preflight.projectDir,
       run_id: runId
     }, startedAt.toISOString());

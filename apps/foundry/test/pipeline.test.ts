@@ -95,7 +95,7 @@ function harness(ownerPlan: string | null = 'pro'): Harness {
   mkdirSync(storage, { recursive: true });
   mkdirSync(keystore, { recursive: true });
   writeFileSync(join(keystore, 'owner.token'), 'owner-token-value\n', 'utf8');
-  writeFileSync(join(keystore, 'work.token'), 'work-token-value\n', 'utf8');
+  writeFileSync(join(keystore, 'vork.token'), 'vork-token-value\n', 'utf8');
 
   const bundle: Bundle = {
     project_name: 'Throwaway Project',
@@ -103,12 +103,14 @@ function harness(ownerPlan: string | null = 'pro'): Harness {
     mission: 'A one-paragraph mission.',
     description: 'The goal.',
     scope: 'The boundary.',
-    visibility: 'private'
+    visibility: 'private',
+    ruleset: 'standard'
   };
   const env: FoundryEnv = {
     owner_token_path: join(keystore, 'owner.token'),
-    work_token_path: join(keystore, 'work.token'),
-    ruleset: 'standard',
+    vork_token_path: join(keystore, 'vork.token'),
+    vork_name: 'Vork Bot',
+    vork_email: 'vork@example.com',
     project_storage_path: storage
   };
 
@@ -117,7 +119,7 @@ function harness(ownerPlan: string | null = 'pro'): Harness {
   const h: Harness = { api, git, foundryVar, storage, ownerPlan, deps: undefined as unknown as PipelineDeps, options: { bundle, env, storagePath: storage, dryRun: false } };
   const identities: Record<string, { login: string; nodeId: string }> = {
     'owner-token-value': { login: 'owner-login', nodeId: 'U_owner' },
-    'work-token-value': { login: 'work-login', nodeId: 'U_work' }
+    'vork-token-value': { login: 'vork-login', nodeId: 'U_vork' }
   };
   h.deps = {
     authIdentity: async (token: string) => {
@@ -193,20 +195,23 @@ describe('bootstrap pipeline', () => {
       visibility: 'private',
       ruleset: 'standard',
       owner_plan: 'pro',
+      vork_login: 'vork-login',
+      vork_name: 'Vork Bot',
+      vork_email: 'vork@example.com',
       path: join(h.storage, 'throwaway')
     });
     expect(entry.founded_at).toBe(entry.updated_at);
-    // one grant: the work account
+    // one grant: the Vork account
     const collaborators = run!.resources.filter((event) => event.resource === 'collaborator');
-    expect(collaborators.map((event) => event.github_login)).toEqual(['work-login']);
+    expect(collaborators.map((event) => event.github_login)).toEqual(['vork-login']);
     // empty remote: the unborn branch pinned to main before the scaffold commit
     const mainDir = join(h.storage, 'throwaway', 'main');
     expect(h.git.ops).toContain(`setUnbornBranch(${mainDir}, main)`);
-    // main/ committed as the owner, then handed to the work identity
+    // main/ committed as the owner, then handed to the Vork account's commit identity from the environment
     const identityOps = h.git.ops.filter((op) => op.startsWith(`setIdentity(${mainDir},`));
     expect(identityOps).toEqual([
       `setIdentity(${mainDir}, owner-login, owner-login@throwaway.localhost)`,
-      `setIdentity(${mainDir}, work-login, work-login@throwaway.localhost)`
+      `setIdentity(${mainDir}, Vork Bot, vork@example.com)`
     ]);
     // the empty team/ directory, and it alone
     expect(existsSync(join(h.storage, 'throwaway', 'team'))).toBe(true);
@@ -223,7 +228,7 @@ describe('bootstrap pipeline', () => {
     const h = harness();
     const outcome = await runBootstrapPipeline(h.options, h.deps);
     const raw = readFileSync(outcome.eventsPath!, 'utf8');
-    for (const secret of ['owner-token-value', 'work-token-value']) {
+    for (const secret of ['owner-token-value', 'vork-token-value']) {
       expect(raw).not.toContain(secret);
     }
   });
@@ -281,7 +286,7 @@ describe('bootstrap pipeline', () => {
 
   it('preflight failures exit 3 naming the subject, before any mutation', async () => {
     const h = harness();
-    rmSync(h.options.env.work_token_path);
+    rmSync(h.options.env.vork_token_path);
     const caught = await expectFailure(h);
     expect(caught.exitCode).toBe(EXIT.PREFLIGHT);
     expect(caught.message).toMatch(/token file not found/);
@@ -307,7 +312,7 @@ describe('bootstrap pipeline', () => {
       expect(readRegistry(pub.foundryVar).projects['throwaway']).toMatchObject({ visibility: 'public', owner_plan: 'free' });
 
       const none = harness('free');
-      const noneOutcome = await runBootstrapPipeline({ ...none.options, env: { ...none.options.env, ruleset: 'none' } }, none.deps);
+      const noneOutcome = await runBootstrapPipeline({ ...none.options, bundle: { ...none.options.bundle, ruleset: 'none' } }, none.deps);
       expect(noneOutcome.exitCode).toBe(EXIT.SUCCESS);
       expect(none.api.rulesets).toEqual([]);
       expect(readRegistry(none.foundryVar).projects['throwaway']).toMatchObject({ ruleset: 'none', owner_plan: 'free' });
@@ -324,7 +329,7 @@ describe('bootstrap pipeline', () => {
       const caught = await expectFailure(refused);
       expect(caught.exitCode).toBe(EXIT.GITHUB);
       expect(caught.message).toMatch(/rulesets failed/);
-      expect(caught.message).toMatch(/FOUNDRY_RULESET=none/);
+      expect(caught.message).toMatch(/ruleset none/);
       expect(caught.message).toMatch(/re-run/);
     });
 

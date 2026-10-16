@@ -26,6 +26,9 @@ function input(overrides: Partial<RegistryInput> = {}): RegistryInput {
     visibility: 'private',
     ruleset: 'standard',
     owner_plan: 'pro',
+    vork_login: 'vork-login',
+    vork_name: 'Vork Bot',
+    vork_email: 'vork@example.com',
     path: '/projects/sample',
     run_id: 'run-1',
     ...overrides
