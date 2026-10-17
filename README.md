@@ -30,7 +30,7 @@ Everything below is yours to supply, in the order you need it.
 ```sh
 git clone https://github.com/jasonyliu/vork.git
 cd vork
-git checkout v2026.10.16        # the release tag you are installing
+git checkout v2026.10.18        # the release tag you are installing
 provisions/install --surface claude \
   --owner-token ~/.vork/github/owner.token \
   --vork-token  ~/.vork/github/vork.token \
