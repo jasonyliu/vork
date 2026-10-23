@@ -21,7 +21,8 @@
 <project-storage-path>/<project-name>/
 ├── main/                # canonical project repo (clone of <remote>)
 ├── products/            # local-only outcome surface
-└── team/                # local-only per-actor clones
+├── team/                # local-only per-actor clones
+└── vault/               # local-only per-actor checkouts of the project's vault, where it keeps one
 ```
 
 ## Products

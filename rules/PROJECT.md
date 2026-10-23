@@ -7,13 +7,16 @@ The Principal is the person whose projects these are: the owner of every reposit
 ```
 <storage-root>/<key>/         # one project container; <key> is its compact lowercase handle
 ├── main/                     # the working clone — on a single-actor machine, the only one
-└── team/<agent>/             # per-agent clones, present only where agents work the same project concurrently
+├── team/<actor>/             # per-actor clones, present only where actors work the same project concurrently
+└── vault/<actor>/            # per-actor checkouts of the project's vault, present only where the project keeps one
 ```
 
-The storage root is chosen when the kit is installed and written into Foundry's environment; `~/Vork/projects/` is the suggested default. The durable rule underneath the layout: **one mutable checkout belongs to one actor.** On a machine where one actor works a project, `main/` is the only clone it carries. On a machine where several agents work the same project concurrently, each agent works its own `team/<agent>/` clone. Which machine plays which part is the Principal's arrangement. Concurrency across machines is already handled by git itself: every actor pushes lanes to the same remote. When it is unclear whether you are the main agent on a project, ask first — then work in `main/`.
+The storage root is chosen when the kit is installed and written into Foundry's environment; `~/Vork/projects/` is the suggested default. The durable rule underneath the layout: **one mutable checkout belongs to one actor.** On a machine where one actor works a project, `main/` is the only clone it carries. On a machine where several actors work the same project concurrently, each actor works its own `team/<actor>/` clone. Which machine plays which part is the Principal's arrangement. Concurrency across machines is already handled by git itself: every actor pushes lanes to the same remote. When it is unclear whether you are the main agent on a project, ask first — then work in `main/`.
 
 - The kit itself — this convention, the record templates, Foundry and the skills every project uses — is Vork, installed once per machine from its own clone; the clone's `README.md` is the map.
 - Credentials live outside every project as files, one per account, read by path; Foundry's environment names the two token files the convention needs, the Principal's and the Vork account's.
+- **Actors** — an actor is one agent on one harness, and its folder is named for both: the harness alone where it runs one agent (`claude`, `codex`), `<harness>_<agent>` where it runs several (`openclaw_main`). The same name serves `team/<actor>/` and `vault/<actor>/`.
+- **Vault** — a project's locally managed resources, the material it keeps off GitHub — personal data, working records, run output — live in its vault: one git repository per project, `<key>_vault`, on a git server the Principal runs or as a plain local repository, the Principal's choice. Each actor that writes it works its own checkout at `vault/<actor>/`. The GitHub repository holds what the project builds and records; the vault holds what stays local; credentials stay outside both.
 - The same layout exists on every machine the Principal works from.
 
 ## Lifecycle
