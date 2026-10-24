@@ -40,7 +40,7 @@ Two tokens, both file paths, plus one commit identity, the whole identity surfac
 |---|---|
 | `FOUNDRY_OWNER_TOKEN_PATH` | the owner account's token: its authenticated login *is* the owner; creates the repo, pushes the scaffold, applies rulesets, sends the invite. The owner is the Principal, who approves pull requests. `GET /user` carries the plan the gate reads only when the token holds `read:user` (classic); otherwise the plan is `unknown` and a refused ruleset is named at its own stage. |
 | `FOUNDRY_VORK_TOKEN_PATH` | the Vork account's token: accepts the invite and pushes kickoff's lane. Every agent session commits and pushes as this account. |
-| `FOUNDRY_VORK_NAME`, `FOUNDRY_VORK_EMAIL` | the Vork account's commit identity, `user.name` and `user.email`, bound to every founded `main/`; what every commit from a founded clone carries unless the committer overrides it |
+| `FOUNDRY_VORK_NAME`, `FOUNDRY_VORK_EMAIL` | the Vork account's commit identity, `user.name` and `user.email`, bound to every founded `main/` as its starting identity; the actor working the clone sets its own over it (`rules/PROJECT.md §Identity`) |
 
 Two accounts, and the separation is the gate: an account cannot approve its own pull request, so `protect-main`'s one required review is satisfiable only by the owner reviewing the Vork account's lanes (`rules/PROJECT.md §Identity`). Each token is a file the operator creates and names; Foundry reads it by path and never from the environment's value. A classic token needs the `repo` scope, and `read:user` for the plan gate to act before any mutation; a fine-grained token needs repository administration, contents, issues and pull requests on the owner's repositories.
 
