@@ -16,7 +16,7 @@ The storage root is chosen when the kit is installed and written into Foundry's 
 - The kit itself — this convention, the record templates, Foundry and the skills every project uses — is Vork, installed once per machine from its own clone; the clone's `README.md` is the map.
 - Credentials live outside every project as files, one per account, read by path; Foundry's environment names the two token files the convention needs, the Principal's and the Vork account's.
 - **Actors** — an actor is one agent on one harness, and its folder is named for both: the harness alone where it runs one agent (`claude`, `codex`), `<harness>_<agent>` where it runs several (`openclaw_main`). The same name serves `team/<actor>/` and `vault/<actor>/`.
-- **Vault** — a project's locally managed resources, the material it keeps off GitHub — personal data, working records, run output — live in its vault: one git repository per project, `<key>_vault`, on a git server the Principal runs or as a plain local repository, the Principal's choice. Each actor that writes it works its own checkout at `vault/<actor>/`. The GitHub repository holds what the project builds and records; the vault holds what stays local; credentials stay outside both.
+- **Vault** — a project's locally managed resources, the material it keeps off GitHub — personal data, working records, run output — live in its vault: one git repository per project, `<key>_vault`, on a git server the Principal runs or as a plain local repository, the Principal's choice. Each actor that writes or reads it works its own checkout at `vault/<actor>/`; a stand-alone app — one that runs on its own schedule with no operator — keeps its own at `vault/apps/<app>/`, and a tool an agent launches takes the vault path as a required flag. The GitHub repository holds what the project builds and records; the vault holds what stays local; credentials stay outside both.
 - The same layout exists on every machine the Principal works from.
 
 ## Lifecycle
@@ -165,7 +165,8 @@ The issues and the backlog serve different purposes: the backlog carries work in
 
 ## Identity
 
-- Two GitHub accounts carry a project: the Principal's own, which owns every repository and approves every pull request, and the Vork account, which every agent session commits and pushes as. Foundry binds the Vork account's commit identity, the name and email the kit was installed with, to `main/` at founding; commit under it.
+- Two GitHub accounts carry a project: the Principal's own, which owns every repository and approves every pull request, and the Vork account, which every agent session pushes as.
+- Every actor signs its commits as itself, in every repository it commits to — a GitHub working clone, a vault checkout, any other: a name and email the Principal assigns per actor, one per harness and one per agent, set in each checkout and never per machine. Foundry binds the Vork account's commit identity, the name and email the kit was installed with, to `main/` at founding, as the clone's starting identity; the actor working the clone sets its own over it.
 - Pull requests and GitHub API writes authenticate with the Vork account's token, a file read by path and bound per command; remote URLs stay clean. The Principal reviews and approves under the Principal's own account; keeping the two identities separate is what makes that approval a real gate.
 
 ## Startup

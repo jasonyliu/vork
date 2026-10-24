@@ -24,7 +24,7 @@ Identifiers:
 
 - `<surface>`: `claude` | `codex`; names the manual folder, the installer's `--surface` value, and the `provisions/<surface>/` folder where the surface needs more than the rule and skills.
 - `<projects-root>`: the storage root, parent of every `<project_key>/` (`rules/PROJECT.md §Storage`); one value per machine, chosen at install, written into Foundry's environment and into the Codex pointer block.
-- The Vork account: the second GitHub account, the one every agent session commits and pushes as (`rules/PROJECT.md §Identity`); its token path and its commit identity are install-time inputs written into Foundry's environment.
+- The Vork account: the second GitHub account, the one every agent session pushes as (`rules/PROJECT.md §Identity`); its token path and its commit identity — the starting identity of every founded clone — are install-time inputs written into Foundry's environment.
 - `<vork>`: the Vork clone the installer belongs to, resolved from the script's own location. The clone at a release tag is the deployed release; the installer is how it reaches a surface.
 - Managed-block markers: `<!-- vork:start v=<sha> source=<tag> deployed=<YYYY-MM-DD> -->` … `<!-- vork:end -->`. Content between the markers is the kit's; content outside is the operator's and is never touched.
 
