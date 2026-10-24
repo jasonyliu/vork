@@ -18,6 +18,7 @@ Release 2 treats every consumer of the kit as a deployment surface and ships two
 
 | Date | Item |
 |---|---|
+| 2026-10-24 | Identity per actor and the vault's readers and apps — `rules/PROJECT.md §Identity` and `§Storage` (#36), released as `v2026.10.24` |
 | 2026-10-23 | The vault in the convention — `rules/PROJECT.md §Storage` names the vault (one git repository per project for its locally managed resources, checked out per actor) and the actor naming for `team/` and `vault/`; landed from the backlog (#33), released as `v2026.10.23` |
 | 2026-10-16 | Release 2 — the standalone kit (handoff, 2026-10-14) — shipped by `milestone_v2026.10.14_standalone-kit` as `v2026.10.16`: the kit is Vork's own, deployed to Claude and Codex by one installer; the framework tree left `main` for `v2026.10.13` |
 | 2026-10-16 | Foundry on the GitHub REST API version of 2022-11-28 — every request now names `2026-03-10`, `@octokit/rest` 22; shipped by `milestone_v2026.10.14_standalone-kit` the day it was added |

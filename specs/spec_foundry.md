@@ -51,7 +51,7 @@ Sub-steps in order, each streaming its resource event; artifact shapes per `spec
 
 - Identity for the scaffold commit is the owner's: `user.name = <owner_login>`, `user.email = <owner_login>@<project_key>.localhost`; `git add -A`; message `Foundry: initial project scaffold`, the repository's first commit; push `main` under the owner token (the push creates the branch and lands before any ruleset, the lockout guard); a rejection from an operator-created ruleset is reported by name, exit 5.
 - Create `dev` at the scaffold commit (`POST git/refs`), so both standing branches exist before protection.
-- Re-bind `main/` to the Vork account's commit identity, `user.name = FOUNDRY_VORK_NAME`, `user.email = FOUNDRY_VORK_EMAIL`: from here on `main/` is the working clone (`rules/PROJECT.md §Storage`) and every commit made from it carries that identity; the owner's identity leaves with the push.
+- Re-bind `main/` to the Vork account's commit identity, `user.name = FOUNDRY_VORK_NAME`, `user.email = FOUNDRY_VORK_EMAIL`: from here on `main/` is the working clone (`rules/PROJECT.md §Storage`), starting from that identity until the actor working it sets its own (`rules/PROJECT.md §Identity`); the owner's identity leaves with the push.
 
 ### Rulesets
 
