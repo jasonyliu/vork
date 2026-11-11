@@ -14,4 +14,7 @@ For each project:
 
 ## Record
 
-{one line per act once run: the projects taken, their pull requests, the date; each project's own fix record names its own}
+- 2026-11-11 — seven projects took the adoption, one fix off `dev` each, opened by `foundry kickoff --fix --base dev` from scratch clones and merged on the Principal's word; each project's own fix record names what it changed.
+- Act 2 took the kit's whole template set rather than the four files this release changed: six projects held templates older than release 2, worded for the retired framework, and one lacked the charter's `vault/` row. `foundry verify` exits 0 for every project after the copy.
+- Act 3 changed two projects: their CI runs the focused tier for a fix released on its own, and their production manuals and ruleset notes name the fix. One project also gained the root `README.md` it lacked, the Principal's call.
+- The scratch clones were removed once the pull requests merged.
