@@ -2,7 +2,7 @@
 
 ## Current
 
-The convention, the templates, the release skill and the `publish` spec are written on the draft lane. Next: the Principal's preview of the draft, then the build of `foundry publish`.
+The convention, the templates, the release skill and the `publish` spec are written on the draft lane. Next: the Principal's preview of the draft (#39), then the build of `foundry publish`.
 
 ## Plan
 
@@ -13,7 +13,7 @@ The convention, the templates, the release skill and the `publish` spec are writ
 | 3 | Templates: `handoff.md`, `fix.md`, `release.md`, the index | D2 | done | draft lane, d2b270f, 99d2fac |
 | 4 | Release skill: milestone and fix closes, Publish, Deploy | D3 | done | draft lane, 028673b |
 | 5 | `publish` spec in the three Foundry specs; `spec_kit.md` | D4, D7 | done | draft lane, 8cb05d8, 6f3d43a, 4f4a072 |
-| 6 | The Principal's preview of the draft; the draft PR merged | — | pending | draft lane |
+| 6 | The Principal's preview of the draft; the draft PR merged | — | in progress | draft lane, #39 |
 | 7 | Build `foundry publish` and its tests | D4 | pending | `feature/milestone_v2026.11.11_handoff-fixes-publish/publish` |
 | 8 | README: Foundry's `publish` | D7 | pending | publish lane |
 | 9 | Fix records for `v2026.10.18`, `v2026.10.23`, `v2026.10.24` | D5 | pending | `feature/milestone_v2026.11.11_handoff-fixes-publish/fix-records` |
