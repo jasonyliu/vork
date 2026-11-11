@@ -44,6 +44,20 @@ describe('bin/foundry', () => {
     }
   });
 
+  it('kickoff takes exactly one of --milestone and --fix, and --base with --fix alone, main or dev', () => {
+    for (const [args, pattern] of [
+      [['kickoff', '--project', 'sample'], /exactly one of --milestone <slug> and --fix <slug>/],
+      [['kickoff', '--project', 'sample', '--milestone', 'm', '--fix', 'f', '--base', 'dev'], /exactly one of/],
+      [['kickoff', '--project', 'sample', '--fix', 'f'], /--fix requires --base <main\|dev>/],
+      [['kickoff', '--project', 'sample', '--milestone', 'm', '--base', 'dev'], /--base applies to --fix alone/],
+      [['kickoff', '--project', 'sample', '--fix', 'f', '--base', 'prod'], /--base must be main or dev/]
+    ] as const) {
+      const r = run([...args]);
+      expect(r.status).toBe(2);
+      expect(r.stderr).toMatch(pattern);
+    }
+  });
+
   it('a missing token file exits 3 naming the path, before any API call', () => {
     const bundle = join(import.meta.dirname, 'fixtures-bundle.json');
     const r = run(['bootstrap', '--bundle', bundle, '--dry-run']);

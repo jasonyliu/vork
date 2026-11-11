@@ -2,7 +2,7 @@
 
 ## Current
 
-The draft is on `dev` (#39). `foundry publish` is built and tested on its lane, its dry-run clean against this repository. Next: `kickoff --fix` on its own lane, then the README.
+The draft is on `dev` (#39). `publish` (#40) and `kickoff --fix` with the README (stacked on #40) are built and tested, waiting on the Principal's merge. Next: the fix records for the three releases outside a milestone, then the review.
 
 ## Plan
 
@@ -14,9 +14,9 @@ The draft is on `dev` (#39). `foundry publish` is built and tested on its lane, 
 | 4 | Release skill: milestone and fix closes, Publish, Deploy | D3 | done | draft lane, 028673b, afc1b17 |
 | 5 | Specs: `publish` and `kickoff --fix` in the three Foundry specs; `spec_kit.md`; the foundry skill | D4, D7, D9 | done | draft lane, 8cb05d8, 6f3d43a, 4f4a072, f47e8d3 |
 | 6 | The Principal's go on the draft; the draft PR merged | — | done | #39, 43c0221 |
-| 7 | Build `foundry publish` and its tests | D4 | done | `feature/milestone_v2026.11.11_handoff-fixes-publish/publish` |
-| 8 | Build `foundry kickoff --fix` and its tests | D9 | pending | `feature/milestone_v2026.11.11_handoff-fixes-publish/kickoff-fix` |
-| 9 | README: Foundry's `publish` and `kickoff --fix` | D7 | pending | the lane of step 8 |
+| 7 | Build `foundry publish` and its tests | D4 | done | `feature/milestone_v2026.11.11_handoff-fixes-publish/publish`, #40 |
+| 8 | Build `foundry kickoff --fix` and its tests | D9 | done | `feature/milestone_v2026.11.11_handoff-fixes-publish/kickoff-fix` |
+| 9 | README: Foundry's `publish` and `kickoff --fix` | D7 | done | the lane of step 8 |
 | 10 | Fix records for `v2026.10.18`, `v2026.10.23`, `v2026.10.24` | D5 | pending | `feature/milestone_v2026.11.11_handoff-fixes-publish/fix-records` |
 | 11 | Review; release; GitHub Releases for `v2026.10.23` and `v2026.10.24` by `publish --version` | D6 | pending | release lane |
 | 12 | One-off adoption in every existing project that follows the convention: a fix off `dev` in each, templates copied, standing hotfix mentions retired | D8 | pending | `cutover.md` |
