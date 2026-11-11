@@ -142,7 +142,7 @@ The record that carries a milestone's or a fix's work from one session to the ne
 - **Next** — what the next session does first.
 - **Notes** — what the next session needs that the records leave out. A finding that matters beyond the next session moves into the record that owns it: a spec, the backlog, an issue, the decomposition's Trail.
 
-A session wraps up when the Principal calls it, and when its work is done. Its entry joins the lane the session is working on; with none open, it goes on the record's own handoff lane — `feature/<milestone-folder>/handoff`, `fix/<fix-folder>/handoff` — off `dev`, brought level with `dev` before each use. Either lane is pushed and lands on `dev` by pull request. The plan and its step states stay in `decomposition.md`; the handoff records where each session left them.
+A session wraps up when the Principal calls it, and when its work is done. Its entry joins the lane the session is working on; with none open, it goes on the record's own handoff lane — `feature/<milestone-folder>/handoff`, `fix/<fix-folder>/handoff` — off `dev`, brought level with `dev` before each use. Either lane is pushed, and the entry reaches `dev` when that lane does — a fix released on its own carries it there with its sync. The plan and its step states stay in `decomposition.md`; the handoff records where each session left them.
 
 ### Releases — `docs/releases/release_v<YYYY.MM.DD>/`
 
@@ -184,7 +184,7 @@ The issues and the backlog serve different purposes: the backlog carries work in
 
 ## Branches
 
-- Two standing branches. **`main`** carries release truth — every commit on it is a release boundary. **`dev`** carries integration — in-progress milestone work lands there as it completes. Both advance by pull request, and the Principal's approval — under the Principal's own account — is what merges one.
+- Two standing branches. **`main`** carries release truth — every commit on it is a release boundary. **`dev`** carries integration — in-progress milestone work, and every fix riding the next release, lands there as it completes. Both advance by pull request, and the Principal's approval — under the Principal's own account — is what merges one.
 - Milestone work happens on lanes off `dev`: **`feature/<milestone-folder>/<slug>`** for milestone features, **`fix/<milestone-folder>/<slug>`** for milestone-scoped corrections.
 - A fix (§Lifecycle, Fix) works on **`fix/<fix-folder>/<slug>`**. Riding the next release, it comes off `dev` and merges to `dev` by pull request. Released on its own, it comes off `main`, merges back to `main` by pull request and is tagged — and the act completes on `dev`: immediately after the tag, open **`fix/<fix-folder>/sync`** off `dev`, merge `main` into it, resolve what surfaces while the context is fresh — the conflicts, and the judgment of what `dev`'s newer work still needs from the fix — and land it by pull request on green CI. A fix released on its own is done when **both** standing branches carry it; `git branch -r --contains <tag>` verifies.
 - The record segment in every lane name, a milestone folder or a fix folder, ties the lane to its record.
@@ -203,6 +203,6 @@ The issues and the backlog serve different purposes: the backlog carries work in
 1. `git status` the clone; a dirty tree gets resolved before it gets added to. `git fetch`, land on `dev`, and pull.
 2. Read the project's `docs/charter.md`, `docs/backlog.md`, and the record of the work — the active milestone's, or the fix's — in that order.
 3. Read the record's newest handoff, once it has one: `git log --all --source -1 --format=%S -- <record-folder>/handoff.md` names the branch that holds it. Its newest entry names the lane the work continues on; check that lane out, pull, and read the record again there, since the record's updates ride the lane.
-4. Work on a lane — the one the Brief names, or a new one for new work, off the branch §Branches gives it — record the work, commit as you go, and open the pull request for the Principal.
+4. Work on a lane — the one the newest handoff entry names, or a new one for new work, off the branch §Branches gives it — record the work, commit as you go, and open the pull request for the Principal.
 5. Wrap up with the handoff (§Records — Handoff) when the Principal calls it, and when the work is done.
 6. After the pull request merges, the lane stands — lanes are deleted only at a close, in its sweep (§Branches). `dev` and `main` alone persist beyond it.
