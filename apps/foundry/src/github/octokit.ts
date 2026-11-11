@@ -18,9 +18,12 @@ export interface OctokitApiOptions {
 export const GITHUB_API_VERSION = '2026-03-10';
 
 // Constructor options carry no default headers to the wire; a before-request
-// hook does. `request` lets a test inject its own fetch.
-export function newOctokit(token: string, request: { fetch?: typeof fetch } = {}): Octokit {
-  const client = new Octokit({ auth: token, request });
+// hook does. `request` lets a test inject its own fetch; `log` replaces
+// Octokit's console logger where a caller reports failures itself.
+type OctokitLog = { debug: (message: string) => void; info: (message: string) => void; warn: (message: string) => void; error: (message: string) => void };
+
+export function newOctokit(token: string, request: { fetch?: typeof fetch } = {}, log?: OctokitLog): Octokit {
+  const client = new Octokit({ auth: token, request, ...(log === undefined ? {} : { log }) });
   client.hook.before('request', (options) => {
     options.headers = { ...options.headers, 'X-GitHub-Api-Version': GITHUB_API_VERSION };
   });
@@ -202,7 +205,10 @@ export function buildGitHubApi(options: OctokitApiOptions): GitHubApi {
 // §Publish`): a draft or prerelease is never made, and Latest is named
 // explicitly rather than left to GitHub's own ordering.
 export function buildReleaseApi(token: string): ReleaseApi {
-  const rest = newOctokit(token);
+  // a 404 is the expected answer for a Release not yet made; failures reach
+  // the operator through publish's own exit-4 message
+  const silent = (): void => {};
+  const rest = newOctokit(token, {}, { debug: silent, info: silent, warn: silent, error: silent });
   const info = (data: { name: string | null; body?: string | null; html_url: string }): ReleaseInfo => ({
     name: data.name ?? '',
     body: data.body ?? '',
