@@ -119,16 +119,16 @@ Resolve, every check before the first mutation:
 - Heading: the first line of the target's `release.md` reads `# Release <version>` or `# Release <version> — <title>`, `<version>` equal to the folder's; any other first line exits 6 naming the file.
 - Latest: the target is the newest record → the Release is made Latest; else it is not.
 
-Tag `v<version>`:
+Tag `<version>`:
 
 - Present → it must be reachable from `origin/main` (`git merge-base --is-ancestor`), else exit 6 naming the commit it points at; reported `present`, and an annotated tag's subject becomes the Release's name.
-- Absent → the target must be the newest record, else exit 6: an older release is tagged by hand at its own publishing merge. `origin/main`'s tip must be that record's publishing merge — a commit with two parents whose tree carries `docs/releases/release_<version>/release.md` while its first parent's tree does not — else exit 6 naming the failed condition: a commit landed on `main` after the publishing merge, or the tip is no merge. Create the annotated tag at the tip under `main/`'s configured identity, push `refs/tags/v<version>` with the Vork token (exit 5 on a git failure); reported `created`.
+- Absent → the target must be the newest record, else exit 6: an older release is tagged by hand at its own publishing merge. `origin/main`'s tip must be that record's publishing merge — a commit with two parents whose tree carries `docs/releases/release_<version>/release.md` while its first parent's tree does not — else exit 6 naming the failed condition: a commit landed on `main` after the publishing merge, or the tip is no merge. Create the annotated tag at the tip under `main/`'s configured identity, push `refs/tags/<version>` with the Vork token (exit 5 on a git failure); reported `created`.
 
 Release:
 
-- `GET /repos/{owner}/{repo}/releases/tags/v<version>`: found with the same name and body → `present`; found with either different → `drift`, reported, the existing Release left as it stands; not found → create it (`POST /repos/{owner}/{repo}/releases`), `created`. An API failure exits 4.
+- `GET /repos/{owner}/{repo}/releases/tags/<version>`: found with the same name and body → `present`; found with either different → `drift`, reported, the existing Release left as it stands; not found → create it (`POST /repos/{owner}/{repo}/releases`), `created`. An API failure exits 4.
 
-Output: one line per act — `tag <created|present> v<version> <sha>`, `release <created|present|drift> <html_url> latest=<true|false>`; with `--dry-run`, `would create` where an act would mutate. A failure after the tag push leaves the tag standing; the re-run finds it `present` and completes the Release.
+Output: one line per act — `tag <created|present> <version> <sha>`, `release <created|present|drift> "<name>" latest=<true|false> <html_url>`; with `--dry-run`, `would create` where an act would mutate, and `-` for the URL a Release not yet made lacks. A failure after the tag push leaves the tag standing; the re-run finds it `present` and completes the Release.
 
 ### Verification
 
