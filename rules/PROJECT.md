@@ -21,19 +21,19 @@ The storage root is chosen when the kit is installed and written into Foundry's 
 
 ## Lifecycle
 
-Every project honors the same lifecycle: founded once at **Inception**, advanced one milestone at a time through the loop, its releases carried live by **Deployment**, run day-to-day by **Operation**, defended by **Hotfix**.
+Every project honors the same lifecycle: founded once at **Inception**, advanced one milestone at a time through the loop and by each **Fix** beside it, its releases carried live by **Deployment**, run day-to-day by **Operation**.
 
 `Inception → ( Draft → Execution → Integration → Review → Release )* → Deployment → Operation`
 
 - **Inception** — once per project. A project is founded from discussion: when a mission the Principal and you are shaping turns fruitful, the Principal directs the founding, Foundry raises the container (repository, skeleton, storage folder), and the charter is authored with the Principal, whose acceptance of it closes Inception.
 - **Draft** — opens each milestone, in a causal chain: **research investigates the problem, its findings shape the specs, and the specs define the milestone's scope.** The milestone record and the charter's active-milestone pointer make it Active; fix work promoted from the backlog enters here alongside features. Draft ends at the Principal's **preview**: the specs are explicit enough to build from, and the Principal says go.
-- **Execution** — the building, opened by laying down the plan. **Decomposition is an act of execution:** as building begins, `decomposition.md` in the milestone folder itemizes the key steps and their sequence toward the deliverables `milestone.md` sets — every milestone has key steps, so every milestone carries this record. The plan changes over a milestone's course; amend it with dated trail lines as it does, in the same commit as the work — `decomposition.md` doubles as the milestone's ledger, and its Current section is where a fresh session orients. Work then runs on lanes off `dev`, sized to the session — one feature, one lane, one pull request; when a real deadline presses, narrow the milestone honestly and record the narrowing.
+- **Execution** — the building, opened by laying down the plan. **Decomposition is an act of execution:** as building begins, `decomposition.md` in the milestone folder itemizes the key steps and their sequence toward the deliverables `milestone.md` sets — every milestone has key steps, so every milestone carries this record. The plan changes over a milestone's course; amend it with dated trail lines as it does, in the same commit as the work — `decomposition.md` doubles as the milestone's ledger, and its Current section is where a fresh session orients; the milestone's `handoff.md` carries the work from one session to the next (§Records — Handoff). Work then runs on lanes off `dev`, sized to the session — one feature, one lane, one pull request; when a real deadline presses, narrow the milestone honestly and record the narrowing.
 - **Integration** — each finished lane lands on `dev` by pull request on green CI. The merge is where conflict judgment happens; leave an integration note when a merge required it.
-- **Review** — the milestone judged whole against its Scope, Deliverables, and Verification: the Principal's **review**, hands-on, against the previewed specs. Findings become `fix/**` lanes and the review repeats; the milestone closes when the Principal calls it complete and deployable.
-- **Release** — publication: the release notes, the charter close-out (milestone to Past, pointers refreshed), the `dev → main` pull request on release CI, and the version tag sealing it. One release per milestone.
+- **Review** — the milestone judged whole against its Scope, Deliverables, and Verification: the Principal's **review**, hands-on, against the previewed specs. Findings become `fix/<milestone-folder>/<slug>` lanes and the review repeats; the milestone closes when the Principal calls it complete and deployable.
+- **Release** — publication: the release notes, the charter close-out (milestone to Past, pointers refreshed), the `dev → main` pull request on release CI, the version tag sealing it, and the GitHub Release carrying its notes. One release per milestone, and one per fix.
 - **Deployment** — beyond the loop: carries a published release into one environment, exactly as that environment's manual directs — mechanism, smoke, rollback, record. Before the first act, the deploying agent lists every act the manuals call for on every target and the Principal confirms the list; deployment is where a release reaches production, and the pause is deliberate. A failed attempt rolls the environment back, is recorded as the invocation's result, and the Principal decides its disposition.
-- **Operation** — runs the prepared workflows against deployed releases, in parallel with later milestone loops. A gap a run reveals returns to the loop as milestone work, through a new Draft.
-- **Hotfix** — the Principal's call, defending production: a `hotfix/<slug>` lane off `main` carrying fix, release record, and tag in one compressed act — which completes on `dev`, in the same sitting: a `fix/main-sync/<hotfix-slug>` lane off `dev` merges `main` in, the conflict and keep-or-supersede judgment is made now while context is fresh, and lands by pull request on green CI. A hotfix is done when both standing branches carry it.
+- **Operation** — runs the prepared workflows against deployed releases, in parallel with later milestone loops. A gap a run reveals returns as a fix, or to the loop as milestone work through a new Draft.
+- **Fix** — the Principal's call, beside the loop: an immediate bug fix, or a change too small to open a milestone. A `fix/<fix-folder>/<slug>` lane off `main` carries the change, its fix record and its release record in one act; its pull request into `main` is the publishing merge, and the version tag seals it. The fix completes on `dev` in the same sitting: a `fix/<fix-folder>/sync` lane off `dev` merges `main` in, the conflict and keep-or-supersede judgment is made now while context is fresh, and it lands by pull request on green CI. A fix is done when both standing branches carry it.
 
 ## Structure
 
@@ -45,6 +45,7 @@ docs/
 ├── backlog.md               # known, unscheduled work
 ├── conventions/templates/   # the record templates, placed at founding
 ├── milestones/              # milestone_v<YYYY.MM.DD>_<slug>/ — one folder per milestone
+├── fixes/                   # fix_v<YYYY.MM.DD>_<slug>/ — one folder per fix
 ├── research/                # research_<YYYYMMDD>_<slug>/ — findings with evidence
 ├── operations/              # work_<slug>/workflow.md — recurring, unattended work definitions
 ├── deployments/             # deploy_<environment>/ — how this project reaches each environment
@@ -75,13 +76,13 @@ The charter's Path, Products, and Milestones sections refresh at every release, 
 
 ### Backlog — `docs/backlog.md`
 
-The standing list of known, unscheduled work — improvements, fixes, and observations worth tracking before they become milestone work. Every project maintains one from its founding, even when it starts empty. It records:
+The standing list of known, unscheduled work — improvements, fixes, and observations worth tracking before they become a fix or milestone work. Every project maintains one from its founding, even when it starts empty. It records:
 
 - **Items** — one titled subsection per open item: a short title and the date it was added, then enough context that a future session picks it up cold — what it is, why it matters, and where the evidence lives. Every later edit appends a dated trail line — new evidence, a scope shift, a decision — so the item carries its own history; the trail grows, and earlier lines stand.
 - **Skipped** — items explicitly dropped, each with a date and a one-line reason.
-- **Done** — items shipped, each with a date and a one-line outcome: directly from the backlog, or by the milestone that took them in, naming its release.
+- **Done** — items shipped, each with a date and a one-line outcome: shipped by the fix or the milestone that took them in, naming its release.
 
-Add an item the moment it is worth tracking. An item leaves **Items** when it is settled: it ships — directly, or by the milestone that took it in, whose release close-out moves it — and moves to **Done**; or it is explicitly dropped and moves to **Skipped**. While a milestone carries it, the item stays in **Items** with a dated trail line naming the milestone, and the milestone record holds the work. Both trails are kept — the history of what was skipped and shipped is part of the record.
+Add an item the moment it is worth tracking. An item leaves **Items** when it is settled: it ships — by the fix or the milestone that took it in, whose release close-out moves it — and moves to **Done**; or it is explicitly dropped and moves to **Skipped**. While a fix or a milestone carries it, the item stays in **Items** with a dated trail line naming that record, and that record holds the work. Both trails are kept — the history of what was skipped and shipped is part of the record.
 
 ### Research — `docs/research/research_<YYYYMMDD>_<slug>/`
 
@@ -93,7 +94,7 @@ How the project understands a problem before deciding its solution. Each researc
 
 ### Specs — `specs/spec_<slug>.md`
 
-The execution-shaping blueprints: what will be built, feature by feature, and how the result is verified. A spec precedes any non-trivial build — it is what the Principal previews before saying go. Specs keep stable, semantic names and are revised in place as understanding improves; each milestone's record lists every spec it created or edited, so spec evolution traces to the milestone that made it. The `techspec` skill carries the authoring method.
+The execution-shaping blueprints: what will be built, feature by feature, and how the result is verified. A spec precedes any non-trivial build — it is what the Principal previews before saying go. Specs keep stable, semantic names and are revised in place as understanding improves; each milestone's or fix's record lists every spec it created or edited, so spec evolution traces to the work that made it. The `techspec` skill carries the authoring method.
 
 ### Milestones — `docs/milestones/milestone_v<YYYY.MM.DD>_<slug>/`
 
@@ -105,7 +106,7 @@ A milestone is one bounded outcome the project pursues, and its folder is the re
 - **Research** — the research records that informed it.
 - **Specs** — the governing specs, and **Trail**: one row per spec created or edited, with a short what-changed note — the same Trail heading the decomposition record carries.
 
-**At most one milestone is active per project**, recorded in the charter; between a release and the next milestone there is none. The folder also holds `decomposition.md` — the milestone's execution plan, laid down as building begins and amended as the plan changes (see §Lifecycle, Execution) — plus the working records the milestone produces when they earn their keep: integration notes when a merge required judgment, review records when a review round is formally written down.
+**At most one milestone is active per project**, recorded in the charter; between a release and the next milestone there is none. The folder also holds `decomposition.md` — the milestone's execution plan, laid down as building begins and amended as the plan changes (see §Lifecycle, Execution) — and `handoff.md`, which carries its work from session to session (§Records — Handoff), plus the working records the milestone produces when they earn their keep: integration notes when a merge required judgment, review records when a review round is formally written down.
 
 ### Decomposition — `docs/milestones/<milestone-folder>/decomposition.md`
 
@@ -117,9 +118,29 @@ The milestone's execution plan and running ledger, laid down as an act of execut
 
 **Update it in the same commit as the work it records** — a step's status flip rides the commit that completes the step, and Current stays true. `milestone.md` stays the stable what; this record is the living how and where-we-are. Entries are states and pointers; narrative belongs in the records the pointers name.
 
+### Fixes — `docs/fixes/fix_v<YYYY.MM.DD>_<slug>/`
+
+A fix is one change released outside the milestone loop (§Lifecycle, Fix), and its folder is the record of it. The leading date is the start date, so folders sort chronologically. The canonical file is `fix.md`, opened on the fix's lane as the work starts:
+
+- **Problem** — the fault or the change wanted, where it surfaced, and the issue or backlog item it answers.
+- **Change** — what changed, with the lane and pull request that carry it.
+- **Verification** — how the change was checked before its publishing merge.
+- **Sync** — how `dev` took the fix: the conflicts the sync merge raised and the keep-or-supersede judgment, written on the sync lane.
+
+The folder also holds the fix's `handoff.md` (§Records — Handoff).
+
+### Handoff — `<milestone-folder>/handoff.md`, `<fix-folder>/handoff.md`
+
+The record that carries a milestone's or a fix's work from one session to the next. A session's working context ends with the session, so whatever the next one needs is written here before it ends. Every milestone and every fix carries one, from its first session's wrap-up. It holds two parts:
+
+- **Brief** — rewritten in place at every wrap-up: where the work stands (the lane the next session continues on, its last commit, the open pull requests), what is open (in flight, unresolved, waiting on the Principal), what the next session does first, and what it needs that the records leave out.
+- **Trail** — one row per session, appended at its wrap-up; earlier rows stand: the date, the actor, the machine, the harness's session id, the transcript's path on that machine, and what the session did, as pointers. A transcript stays on the device that produced it; the Trail is how a later session finds the one it needs to look something up in.
+
+A session wraps up when the Principal calls it, and when its work is done: it rewrites the Brief and appends its Trail row in one commit on the lane the next session continues on — the session's own lane, or, once that lane has merged, the lane opened for the next step — and pushes. The session that releases a milestone wraps up in the close-out on the release lane; the session that completes a fix wraps up on its sync lane. The plan and its step states stay in `decomposition.md`; the handoff records where each session left them.
+
 ### Releases — `docs/releases/release_v<YYYY.MM.DD>/`
 
-A release is a versioned snapshot of the whole project, closing a milestone. Versions are date-based — `v<YYYY.MM.DD>`, with `.r2`, `.r3` suffixes when a day ships more than once — and every release tags the publishing merge on `main` with the version name; the tag is the canonical pointer to the released state. The folder's `release.md` carries lean notes, two lists only: **Features** (new capability) and **Fixes** (what was resolved). In the same act, the closing pointers refresh: the charter moves the milestone from Active to Past with a short shipped-summary, and the milestone's `milestone.md` status reads `Completed` with the release named.
+A release is a versioned snapshot of the whole project, closing a milestone or a fix. Versions are date-based — `v<YYYY.MM.DD>`, with `.r2`, `.r3` suffixes when a day ships more than once — and every release tags the publishing merge on `main` with the version name; the tag is the canonical pointer to the released state. The folder's `release.md` carries lean notes: a heading titling what shipped, the record it closes, and two lists only — **Features** (new capability) and **Fixes** (what was resolved). The tag carries a GitHub Release: the heading, `Release ` dropped, is the tag's message and the Release's name, and the file below the heading is its notes. In the same act, the closing pointers refresh: for a milestone, the charter moves it from Active to Past with a short shipped-summary, and its `milestone.md` status reads `Completed` with the release named; for a fix, its `fix.md` status reads `Completed` with the release named, and the charter's Path and Products refresh where the fix changed them.
 
 ### Deployments — `docs/deployments/deploy_<environment>/`
 
@@ -151,17 +172,19 @@ A workflow is prepared once and run many times. A run that meets anything its de
 
 A project maps onto GitHub as one repository — the project's single repo, carrying the standing branches, every pull request, and the issues. The issues are the glanceable surface: bugs, enhancements and defects in flight, visible from any device, a phone included, with the repo's records staying the truth underneath.
 
-The issues' standing use is **recording bugs, enhancements, and defects** — concrete faults and small improvements, filed the moment they surface, labeled for what they are with the stock `bug` and `enhancement` and the `defect` label Foundry adds. These are findings too small to deserve a backlog item and too important to go unrecorded. The Principal and the working agent file them. A fix that ships closes its issue; an issue that grows enough context and judgment to need curation moves to the backlog or straight into a milestone's fix work.
+The issues' standing use is **recording bugs, enhancements, and defects** — concrete faults and small improvements, filed the moment they surface, labeled for what they are with the stock `bug` and `enhancement` and the `defect` label Foundry adds. These are findings too small to deserve a backlog item and too important to go unrecorded. The Principal and the working agent file them. A fix that ships closes its issue; an issue that grows enough context and judgment to need curation moves to the backlog, into a fix, or straight into a milestone's fix work.
 
 The issues and the backlog serve different purposes: the backlog carries work intentions — curated in the repo, with context, dates, and trails, feeding milestones; the issues carry the fault queue — atomic, labeled, closeable, open to any filer. The issues show state; the record holds truth.
 
 ## Branches
 
 - Two standing branches. **`main`** carries release truth — every commit on it is a release boundary. **`dev`** carries integration — in-progress milestone work lands there as it completes. Both advance by pull request, and the Principal's approval — under the Principal's own account — is what merges one.
-- Work happens on lanes off `dev`: **`feature/<milestone-folder>/<slug>`** for milestone features, **`fix/<milestone-folder>/<slug>`** for milestone-scoped corrections. The milestone segment in the lane name ties every lane to its record. A **`hotfix/<slug>`** lane comes off `main` for an urgent production fix, merges back to `main` by pull request, and is tagged — and the act completes on `dev`: immediately after the tag, open `fix/main-sync/<hotfix-slug>` off `dev`, merge `main` into it, resolve what surfaces while the context is fresh — the conflicts, and the judgment of what `dev`'s newer work still needs from the fix — and land it by pull request on green CI. A hotfix is done when **both** standing branches carry it; `git branch --contains <tag>` verifies.
+- Milestone work happens on lanes off `dev`: **`feature/<milestone-folder>/<slug>`** for milestone features, **`fix/<milestone-folder>/<slug>`** for milestone-scoped corrections.
+- A fix (§Lifecycle, Fix) works on **`fix/<fix-folder>/<slug>`** off `main`, which merges back to `main` by pull request and is tagged — and the act completes on `dev`: immediately after the tag, open **`fix/<fix-folder>/sync`** off `dev`, merge `main` into it, resolve what surfaces while the context is fresh — the conflicts, and the judgment of what `dev`'s newer work still needs from the fix — and land it by pull request on green CI. A fix is done when **both** standing branches carry it; `git branch -r --contains <tag>` verifies.
+- The record segment in every lane name, a milestone folder or a fix folder, ties the lane to its record.
 - Push a lane to the remote and open its pull request there — shared lanes keep the work reviewable from any device before it reaches a standing branch.
-- Rebase a stale lane onto `dev` (a hotfix lane onto `main`), then push with `--force-with-lease`; standing branches move forward only, and their history stands.
-- CI gates the merge: a pull request into a standing branch lands green. Merged lanes are swept at release; a lane with unmerged work is surfaced and resolved, and survives every sweep until it is.
+- Rebase a stale lane onto the standing branch it came off, then push with `--force-with-lease`; standing branches move forward only, and their history stands.
+- CI gates the merge: a pull request into a standing branch lands green. Merged lanes are swept at a close — a milestone's at its release, a fix's own at its completion; a lane with unmerged work is surfaced and resolved, and survives every sweep until it is.
 
 ## Identity
 
@@ -171,7 +194,9 @@ The issues and the backlog serve different purposes: the backlog carries work in
 
 ## Startup
 
-1. Read the project's `docs/charter.md`, `docs/backlog.md`, and the active milestone record — in that order.
-2. `git status` the clone; land on `dev` and pull before new work; a dirty tree gets resolved before it gets added to.
-3. Branch a lane for the work, do it, record it, commit as you go, and open the pull request for the Principal.
-4. After the pull request merges, the lane stands — lanes are deleted only at the milestone's close, in the release sweep. `dev` and `main` alone persist beyond it.
+1. `git status` the clone; a dirty tree gets resolved before it gets added to. `git fetch`, land on `dev`, and pull.
+2. Read the project's `docs/charter.md`, `docs/backlog.md`, and the record of the work — the active milestone's, or the fix's — in that order.
+3. Read the record's newest handoff, once it has one: `git log --all --source -1 --format=%S -- <record-folder>/handoff.md` names the branch that holds it. Its Brief names the lane the work continues on; check that lane out, pull, and read the record again there, since the record's updates ride the lane.
+4. Work on a lane — the one the Brief names, or a new one for new work, off the branch §Branches gives it — record the work, commit as you go, and open the pull request for the Principal.
+5. Wrap up with the handoff (§Records — Handoff) when the Principal calls it, and when the work is done.
+6. After the pull request merges, the lane stands — lanes are deleted only at a close, in its sweep (§Branches). `dev` and `main` alone persist beyond it.
