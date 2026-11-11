@@ -28,7 +28,7 @@ Excluded: automatic wrap-up at a context threshold (dropped by the Principal's r
 
 ## Verification
 
-- `git grep -i hotfix` outside `docs/releases/`, `docs/milestones/` and `docs/research/`, whose records stand as written, finds nothing.
+- `git grep -i hotfix` outside `docs/releases/`, `docs/fixes/`, `docs/milestones/` and `docs/research/`, whose records stand as written, finds nothing.
 - `foundry verify --against <vork clone>` exits 0, the thirteen templates in place.
 - Foundry's test suite green, every check in `specs/spec_foundry.md §Publish — Verification` and the Kickoff checks of `spec_foundry.md` and `spec_foundry-interface.md` among it.
 - `foundry publish --project vork --dry-run` against this repository prints the plan for the newest release and refuses nothing.
