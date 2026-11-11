@@ -1,6 +1,6 @@
 # Foundry
 
-Foundry turns an input bundle into a project container that follows `rules/PROJECT.md` in one invocation, GitHub side and local side, records the founding in the machine's project registry, and opens milestones: `kickoff` creates the milestone record on its draft lane for the Principal and the agent to settle in conversation. Foundry scaffolds structure; conversation fills content. Contracts: `spec_foundry-interface.md`. Artifacts and identifiers: `spec_foundry-data.md`.
+Foundry turns an input bundle into a project container that follows `rules/PROJECT.md` in one invocation, GitHub side and local side, records the founding in the machine's project registry, opens milestones: `kickoff` creates the milestone record on its draft lane for the Principal and the agent to settle in conversation, and publishes releases: `publish` tags a release's publishing merge and creates its GitHub Release from the release record. Foundry scaffolds structure; conversation fills content. Contracts: `spec_foundry-interface.md`. Artifacts and identifiers: `spec_foundry-data.md`.
 
 Source lives at `apps/foundry/` (TypeScript/Node CLI, Node 22 + tsx, `@octokit/rest` with every request naming GitHub REST API version `2026-03-10`; the token-file model is the single auth surface). It runs from the operator's Vork clone at a release tag (`spec_kit.md §Run surface`).
 
@@ -98,6 +98,41 @@ Opens a milestone, in the project's `main/` clone:
 - Print the lane and the record path, exit 0; git or filesystem failure exits 5 naming the act.
 
 The Draft is then settled in conversation on that lane; its merge to `dev` marks the milestone Active in the charter. Kickoff leaves the registry untouched.
+
+## Publish
+
+Closes the publication of one release, in the project's `main/` clone, from the release record already on `origin/main` (`rules/PROJECT.md §Records — Releases`). The Vork token carries every act; the Principal's approval of the publishing merge is the approval this act runs under. Artifact shapes: `spec_foundry-data.md §Release artifacts`.
+
+Resolve, every check before the first mutation:
+
+- Read and authenticate the Vork token (exit 3, named). The repository is `main/`'s origin, `https://github.com/<owner>/<repo>` with or without `.git`; any other origin exits 3 naming it. `main/` absent or not a git clone exits 5.
+- `git fetch origin --tags`.
+- Records: the folders `docs/releases/release_<version>/` on `origin/main` (`git ls-tree`), ordered by version (`spec_foundry-data.md §Identifier system`); none → exit 6.
+- Target: `--version` when given, its folder on `origin/main` or exit 6; else the newest record.
+- Heading: the first line of the target's `release.md` reads `# Release <version>` or `# Release <version> — <title>`, `<version>` equal to the folder's; any other first line exits 6 naming the file.
+- Latest: the target is the newest record → the Release is made Latest; else it is not.
+
+Tag `v<version>`:
+
+- Present → it must be reachable from `origin/main` (`git merge-base --is-ancestor`), else exit 6 naming the commit it points at; reported `present`, and an annotated tag's subject becomes the Release's name.
+- Absent → the target must be the newest record, else exit 6: an older release is tagged by hand at its own publishing merge. `origin/main`'s tip must be that record's publishing merge — a commit with two parents whose tree carries `docs/releases/release_<version>/release.md` while its first parent's tree does not — else exit 6 naming the failed condition: a commit landed on `main` after the publishing merge, or the tip is no merge. Create the annotated tag at the tip under `main/`'s configured identity, push `refs/tags/v<version>` with the Vork token (exit 5 on a git failure); reported `created`.
+
+Release:
+
+- `GET /repos/{owner}/{repo}/releases/tags/v<version>`: found with the same name and body → `present`; found with either different → `drift`, reported, the existing Release left as it stands; not found → create it (`POST /repos/{owner}/{repo}/releases`), `created`. An API failure exits 4.
+
+Output: one line per act — `tag <created|present> v<version> <sha>`, `release <created|present|drift> <html_url> latest=<true|false>`; with `--dry-run`, `would create` where an act would mutate. A failure after the tag push leaves the tag standing; the re-run finds it `present` and completes the Release.
+
+### Verification
+
+- A fixture remote with the newest record merged at `main`'s tip and no tag → an annotated tag at the tip carrying the release name, pushed; a Release with that name, the notes and `make_latest: "true"`; a second run reports `present` twice and mutates nothing.
+- The tip a commit after the publishing merge, or no merge → exit 6 naming the condition, no tag, no write.
+- `--version` of an older record whose annotated tag exists and whose Release is absent → the Release is created under the tag's subject, `make_latest: "false"`; `--version` of an older untagged record → exit 6.
+- A tag pointing outside `origin/main`'s history → exit 6 naming its commit.
+- A first line other than the two heading forms, or a heading version unequal to the folder's → exit 6 naming the file.
+- An existing Release whose body differs → `drift`, no write to it.
+- A Release create failing after the tag push → exit 4; the re-run reports the tag `present` and creates the Release.
+- `--dry-run` against the same fixture → zero pushes, zero GitHub writes, the plan printed with `would create`.
 
 ## Verification
 

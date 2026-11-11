@@ -9,13 +9,16 @@ foundry bootstrap [--bundle <path>] [--interactive] [--dry-run]
                   [--project-storage-path <path>] [--verbose|--quiet]
 foundry verify --against <project-path> [--bundle <path>]
 foundry kickoff --project <project_key> --milestone <slug> [--title <text>] [--note <text>]
+foundry publish --project <project_key> [--version <version>] [--dry-run]
 foundry list
 ```
 
 - `--bundle` and `--interactive` are mutually exclusive; interactive prompts for the bundle fields on a terminal and writes the bundle file beside the run for replay; with stdin a pipe or a file it exits 2 and points at `--bundle`.
-- `--dry-run`: preflight + render to a scratch path under Foundry's var; GitHub, the storage path and the registry stay untouched.
+- `--dry-run`: for `bootstrap`, preflight + render to a scratch path under Foundry's var, GitHub, the storage path and the registry untouched; for `publish`, every resolve check and the plan printed, nothing tagged, pushed or created.
 - `verify --against`: structural check of an existing tree against the canonical skeleton subset; content beyond the skeleton passes free. Without `--bundle` it checks only the bundle-independent subset.
 - `kickoff` opens the milestone record on its draft lane (`spec_foundry.md §Kickoff`). `--milestone` names the slug (`[a-z][a-z0-9-]*`); `--title` the human title (default: the slug); `--note` the settling pointer, seeded into the record's Scope. An existing folder of that name is reported instead of duplicated.
+- `publish` tags a release's publishing merge and creates its GitHub Release (`spec_foundry.md §Publish`). `--version` names the release (`spec_foundry-data.md §Identifier system`), default the newest release record on `origin/main`; a malformed value exits 2.
+- `kickoff` and `publish` find the project at `<storage-root>/<project_key>/main/`; `--project-storage-path` overrides the root for them as for `bootstrap`.
 - `list` prints the machine's project registry (`spec_foundry.md §List`).
 - Re-runs always resume: existing artifacts are skipped and recorded, drift is recorded in the event trail, existing state stands (`spec_foundry.md §Idempotency and resume`).
 - Per-run flags override the environment.
@@ -30,6 +33,7 @@ Exit codes:
 | 3 | preflight failure (auth, identity, permissions, plan gate, name collision, storage path) |
 | 4 | GitHub API failure |
 | 5 | local-side failure (render, filesystem, git, registry file, milestone record) |
+| 6 | `publish` refused: the release state on `origin/main` does not admit the act (named; `spec_foundry.md §Publish`) |
 | 7 | `verify` drift found (a finding, distinct from runtime failure; the caller decides) |
 
 ## Identity
@@ -39,7 +43,7 @@ Two tokens, both file paths, plus one commit identity, the whole identity surfac
 | Token | Role |
 |---|---|
 | `FOUNDRY_OWNER_TOKEN_PATH` | the owner account's token: its authenticated login *is* the owner; creates the repo, pushes the scaffold, applies rulesets, sends the invite. The owner is the Principal, who approves pull requests. `GET /user` carries the plan the gate reads only when the token holds `read:user` (classic); otherwise the plan is `unknown` and a refused ruleset is named at its own stage. |
-| `FOUNDRY_VORK_TOKEN_PATH` | the Vork account's token: accepts the invite and pushes kickoff's lane. Every agent session commits and pushes as this account. |
+| `FOUNDRY_VORK_TOKEN_PATH` | the Vork account's token: accepts the invite, pushes kickoff's lane, pushes publish's tag and creates its GitHub Release. Every agent session commits and pushes as this account. |
 | `FOUNDRY_VORK_NAME`, `FOUNDRY_VORK_EMAIL` | the Vork account's commit identity, `user.name` and `user.email`, bound to every founded `main/` as its starting identity; the actor working the clone sets its own over it (`rules/PROJECT.md §Identity`) |
 
 Two accounts, and the separation is the gate: an account cannot approve its own pull request, so `protect-main`'s one required review is satisfiable only by the owner reviewing the Vork account's lanes (`rules/PROJECT.md §Identity`). Each token is a file the operator creates and names; Foundry reads it by path and never from the environment's value. A classic token needs the `repo` scope, and `read:user` for the plan gate to act before any mutation; a fine-grained token needs repository administration, contents, issues and pull requests on the owner's repositories.
@@ -88,5 +92,6 @@ Plan matrix, enforced at preflight:
 - Every row of the plan matrix behaves as stated against a mocked `GET /user`.
 - `--dry-run` performs zero GitHub mutations (assert by API-call recording), zero writes under the storage path, and leaves the registry byte-identical.
 - `kickoff` creates the milestone folder + `milestone.md` (template sections intact, title, status and date filled, `--note` in Scope) on the draft lane, pushed; a second call reports the existing folder, leaving it exactly as found; a malformed `--milestone` exits 2 naming it.
+- `publish` without `--project` exits 2; `--version v2026.1.5`, `--version 2026.01.05` and `--version v2026.01.05.r1` each exit 2 naming the flag; `--dry-run` performs zero pushes and zero GitHub writes (assert by recording) and prints the plan.
 - `list` renders every registry entry once, in key order.
 - Bootstrap's GitHub artifact set is exactly: repo, the `defect` label, the Vork account's grant, `main` + `dev`, the two rulesets (when `standard`); its local set is exactly the skeleton, `main/`, one empty `team/` directory, and one registry entry.
