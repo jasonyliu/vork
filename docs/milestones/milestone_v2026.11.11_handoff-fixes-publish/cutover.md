@@ -1,6 +1,6 @@
 # Cutover — `milestone_v2026.11.11_handoff-fixes-publish`
 
-The one-off acts that carry this release into every existing project that follows the convention, after the release and its standing deployments. Each project takes them as one fix riding its next release (`rules/PROJECT.md §Lifecycle`, Fix); the project's own fix record holds what its copy changed. The acts run from scratch clones, so no project's working clone changes branch.
+The one-off acts that carry this release into every existing project that follows the convention, after the release and its standing deployments. Each project takes them as one fix riding its next release (`rules/PROJECT.md §Lifecycle`, Fix); the project's own fix record holds what its copy changed. The acts run from scratch clones — a temporary clone of each project's repository in the working session's scratch directory, outside the storage root, removed once its pull request merges — so no project's working clone changes branch.
 
 ## Acts
 
