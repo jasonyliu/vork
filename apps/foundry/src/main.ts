@@ -6,7 +6,7 @@ import { APP_DIR, expandHome, loadDotenv, loadEnv, readToken } from './config.js
 import { EXIT, FoundryError, localError, preflightError, usageError } from './errors.js';
 import { buildGitOps, buildReleaseGit } from './gitops.js';
 import { authIdentity, buildGitHubApi, buildReleaseApi } from './github/octokit.js';
-import { milestoneFolderName, openMilestoneRecord } from './milestones.js';
+import { fixFolderName, milestoneFolderName, openFixRecord, openMilestoneRecord, type FixBase } from './milestones.js';
 import { runBootstrapPipeline } from './pipeline.js';
 import { formatPublishOutcome, githubCoordinates, parseVersion, runPublish } from './publish.js';
 import { formatRegistry, readRegistry } from './registry.js';
@@ -33,6 +33,8 @@ interface Flags {
   milestone?: string;
   title?: string;
   version?: string;
+  fix?: string;
+  base?: string;
 }
 
 function parseFlags(args: string[]): Flags {
@@ -57,6 +59,8 @@ function parseFlags(args: string[]): Flags {
       case '--milestone': flags.milestone = valued('milestone'); break;
       case '--title': flags.title = valued('title'); break;
       case '--version': flags.version = valued('version'); break;
+      case '--fix': flags.fix = valued('fix'); break;
+      case '--base': flags.base = valued('base'); break;
       default: throw usageError(`unknown flag: ${arg}`);
     }
   }
@@ -129,25 +133,32 @@ function commandVerify(flags: Flags): number {
   return result.clean ? EXIT.SUCCESS : EXIT.VERIFY_DRIFT;
 }
 
-// `foundry kickoff --project <key> --milestone <slug> [--title] [--note]`:
-// the milestone record opened on a draft lane in main/, committed under the
-// clone's bound identity, pushed (`spec_foundry.md §Kickoff`).
+// `foundry kickoff --project <key> (--milestone <slug> | --fix <slug> --base
+// <main|dev>) [--title] [--note]`: a milestone record on its draft lane, or a
+// fix record on its lane, in main/, committed under the clone's configured
+// identity, pushed (`spec_foundry.md §Kickoff`).
 async function commandKickoff(flags: Flags): Promise<number> {
   if (flags.project === undefined) throw usageError('kickoff requires --project <project_key>');
-  if (flags.milestone === undefined) throw usageError('kickoff requires --milestone <slug>');
+  if ((flags.milestone === undefined) === (flags.fix === undefined)) throw usageError('kickoff requires exactly one of --milestone <slug> and --fix <slug>');
+  if (flags.milestone !== undefined && flags.base !== undefined) throw usageError('--base applies to --fix alone');
+  if (flags.fix !== undefined && flags.base === undefined) throw usageError('--fix requires --base <main|dev>: main for a fix released on its own, dev for one riding the next release');
+  if (flags.base !== undefined && flags.base !== 'main' && flags.base !== 'dev') throw usageError(`--base must be main or dev (got "${flags.base}")`);
   const env = loadEnv();
   const now = new Date();
-  const folder = milestoneFolderName(now, flags.milestone);
-  const title = flags.title ?? flags.milestone;
+  const slug = (flags.milestone ?? flags.fix)!;
+  const folder = flags.milestone !== undefined ? milestoneFolderName(now, slug) : fixFolderName(now, slug);
+  const title = flags.title ?? slug;
   const vorkToken = readToken(env.vork_token_path);
   await authIdentity(vorkToken).catch((error: unknown) => {
     throw new FoundryError(EXIT.PREFLIGHT, `Vork token failed to authenticate (${env.vork_token_path}): ${error instanceof Error ? error.message : String(error)}`);
   });
   const mainDir = join(expandHome(flags.storagePath ?? env.project_storage_path), flags.project, 'main');
-  const template = templateSource('milestone.md');
-  const result = openMilestoneRecord(buildGitOps(), { mainDir, folder, title, date: now, note: flags.note, template, workToken: vorkToken });
+  const result =
+    flags.fix === undefined
+      ? openMilestoneRecord(buildGitOps(), { mainDir, folder, title, date: now, note: flags.note, template: templateSource('milestone.md'), workToken: vorkToken })
+      : openFixRecord(buildGitOps(), { mainDir, folder, title, date: now, note: flags.note, base: flags.base as FixBase, template: templateSource('fix.md'), workToken: vorkToken });
   process.stdout.write(`${result.lane} ${result.recordPath}\n`);
-  if (result.existing) process.stderr.write(`milestone record already exists — reported as found\n`);
+  if (result.existing) process.stderr.write(`${flags.fix === undefined ? 'milestone' : 'fix'} record already exists — reported as found\n`);
   return EXIT.SUCCESS;
 }
 
