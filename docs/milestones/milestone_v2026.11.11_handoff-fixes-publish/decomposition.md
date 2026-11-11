@@ -2,7 +2,7 @@
 
 ## Current
 
-Released as `v2026.11.11`, the Principal having called the milestone complete and deployable. After the publishing merge: `foundry publish` with the backfill of `v2026.10.23` and `v2026.10.24`, the deployment to the Principal's machines, and the one-off adoption (`cutover.md`).
+Closed: released as `v2026.11.11` and published with the backfill of `v2026.10.23` and `v2026.10.24`, deployed to the Principal's machines, and adopted in every existing project that follows the convention. Nothing open.
 
 ## Plan
 
@@ -18,8 +18,8 @@ Released as `v2026.11.11`, the Principal having called the milestone complete an
 | 8 | Build `foundry kickoff --fix` and its tests | D9 | done | `feature/milestone_v2026.11.11_handoff-fixes-publish/kickoff-fix`, #41, 4a8331b |
 | 9 | README: Foundry's `publish` and `kickoff --fix` | D7 | done | the lane of step 8 |
 | 10 | Fix records for `v2026.10.18`, `v2026.10.23`, `v2026.10.24` | D5 | done | `feature/milestone_v2026.11.11_handoff-fixes-publish/fix-records`, #42 |
-| 11 | Review; release; GitHub Releases for `v2026.10.23` and `v2026.10.24` by `publish --version` | D6 | in progress | `feature/milestone_v2026.11.11_handoff-fixes-publish/release` |
-| 12 | One-off adoption in every existing project that follows the convention: a fix off `dev` in each, templates copied, standing hotfix mentions retired | D8 | pending | `cutover.md` |
+| 11 | Review; release; GitHub Releases for `v2026.10.23` and `v2026.10.24` by `publish --version` | D6 | done | #43, #44, tag `v2026.11.11` |
+| 12 | One-off adoption in every existing project that follows the convention: a fix off `dev` in each, templates copied, standing hotfix mentions retired | D8 | done | `cutover.md` |
 
 ## Trail
 
@@ -27,3 +27,4 @@ Released as `v2026.11.11`, the Principal having called the milestone complete an
 - 2026-11-11 — step 11 added on the Principal's word: the template copy into every existing project is this milestone's one-off act; `rules/PROJECT.md` deploys as before.
 - 2026-11-11 — preview answers (Principal): the handoff becomes one file of per-session entries, newest on top, the entry joining the working lane or the record's handoff lane off `dev`; a fix may ride the next release off `dev`, and every project's adoption does; `kickoff --fix` added as D9, step 8, the steps after it renumbered; projects outside the convention stay out.
 - 2026-11-11 — the Principal called the milestone complete and deployable ("do it, merge to main, release, then deploy"); released as `v2026.11.11`.
+- 2026-11-11 — published, deployed and adopted. The adoption took each project's whole template set, not the four files this release changed, six projects holding templates older than release 2; one project's missing root `README.md` was filled in its adoption fix, the Principal's call. The first handoff entry named a private launch folder; redacted on the Principal's ruling that nothing of his setup enters a public repository.
