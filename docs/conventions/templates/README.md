@@ -10,6 +10,8 @@ Canonical templates for the project records defined in `rules/PROJECT.md §Recor
 | `milestone.md` | Milestone record | `main/docs/milestones/milestone_v<YYYY.MM.DD>_<slug>/milestone.md` |
 | `decomposition.md` | Decomposition record | `<milestone-folder>/decomposition.md` |
 | `research.md` | Research record | `main/docs/research/research_<YYYYMMDD>_<slug>/research.md` |
+| `handoff.md` | Handoff record | `<milestone-folder>/handoff.md`, `<fix-folder>/handoff.md` |
+| `fix.md` | Fix record | `main/docs/fixes/fix_v<YYYY.MM.DD>_<slug>/fix.md` |
 | `release.md` | Release notes | `main/docs/releases/release_v<YYYY.MM.DD>/release.md` |
 | `integration.md` | Integration record | `<milestone-folder>/integration_<YYYY.MM.DD.HH.mm.SS>_<branch-slug>.md` |
 | `review.md` | Review record | `<milestone-folder>/review_<YYYY.MM.DD.HH.mm.SS>.md` |
