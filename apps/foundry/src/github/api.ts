@@ -46,3 +46,23 @@ export interface GitHubApi {
   getRef(owner: string, repo: string, ref: string): Promise<string | null>;
   createRef(owner: string, repo: string, ref: string, sha: string): Promise<void>;
 }
+
+// The GitHub Release surface `publish` consumes (`spec_foundry-data.md §Release
+// artifacts`), kept apart from the bootstrap surface above.
+export interface ReleaseInfo {
+  name: string;
+  body: string;
+  htmlUrl: string;
+}
+
+export interface NewRelease {
+  tagName: string;
+  name: string;
+  body: string;
+  makeLatest: boolean;
+}
+
+export interface ReleaseApi {
+  getReleaseByTag(owner: string, repo: string, tag: string): Promise<ReleaseInfo | null>;
+  createRelease(owner: string, repo: string, release: NewRelease): Promise<ReleaseInfo>;
+}

@@ -1,6 +1,6 @@
 # Kit
 
-Vork is a package of small tools around a harness: the project convention (`rules/PROJECT.md`), the start acts (Foundry), three skills (foundry, release, techspec), and the record templates. Its consumers are deployment surfaces: a harness the operator drives, Claude and Codex, and the operator reading the README. This spec is the package's shape and the installer that deploys it to a surface. Foundry's own contracts: `spec_foundry*.md`. The convention's content: `rules/PROJECT.md`.
+Vork is a package of small tools around a harness: the project convention (`rules/PROJECT.md`), Foundry (the start acts, and `publish` closing a release), three skills (foundry, release, techspec), and the record templates. Its consumers are deployment surfaces: a harness the operator drives, Claude and Codex, and the operator reading the README. This spec is the package's shape and the installer that deploys it to a surface. Foundry's own contracts: `spec_foundry*.md`. The convention's content: `rules/PROJECT.md`.
 
 ## Layout
 
@@ -10,13 +10,13 @@ The Vork clone's tree, which is also a project in the convention's own shape (`f
 README.md  LICENSE  CONTRIBUTING.md
 rules/PROJECT.md                   # the convention, canonical, no frontmatter
 skills/<name>/SKILL.md             # foundry, release, techspec (techspec with references/, evals/)
-apps/foundry/                      # the start acts (spec_foundry*.md); var/ and .env machine-local, gitignored
+apps/foundry/                      # Foundry (spec_foundry*.md); var/ and .env machine-local, gitignored
 provisions/install                 # the installer (§Install)
 provisions/codex/AGENTS.md         # what a surface receives beyond the rule and skills (§Surfaces); a folder per surface that needs one
 docs/charter.md  docs/backlog.md
-docs/conventions/templates/*.md    # the eleven record templates, the one home (spec_foundry-data.md §Skeleton inventory)
+docs/conventions/templates/*.md    # the thirteen record templates, the one home (spec_foundry-data.md §Skeleton inventory)
 docs/deployments/deploy_<surface>/<surface>.md   # one manual per surface: claude, codex
-docs/milestones/  docs/research/  docs/releases/
+docs/milestones/  docs/fixes/  docs/research/  docs/releases/
 specs/spec_kit.md  specs/spec_foundry.md  specs/spec_foundry-interface.md  specs/spec_foundry-data.md
 ```
 

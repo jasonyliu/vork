@@ -1,11 +1,11 @@
 ---
 name: foundry
-description: Found a new project or open a milestone with Foundry — preflight, dry-run, the act, verification. Use when the Principal directs a founding or a new milestone.
+description: Found a new project, or open a milestone or a fix, with Foundry — preflight, dry-run, the act, verification. Use when the Principal directs a founding, a new milestone, or a fix.
 ---
 
 # Foundry — start acts
 
-Foundry performs the two start acts of the project convention: `bootstrap` founds a project (repository, skeleton, local clone, registry entry), `kickoff` opens a milestone. It runs from the Vork clone at the release tag the machine was installed from:
+Foundry performs the two start acts of the project convention: `bootstrap` founds a project (repository, skeleton, local clone, registry entry), `kickoff` opens a milestone or a fix. Its third act, `publish`, belongs to the close (the `release` skill). It runs from the Vork clone at the release tag the machine was installed from:
 
 ```
 cd <vork clone>/apps/foundry
@@ -25,6 +25,12 @@ cd <vork clone>/apps/foundry
 1. `./bin/foundry kickoff --project <key> --milestone <slug> [--title "<Title>"] [--note "<settling pointer>"]` — slug `[a-z][a-z0-9-]*`; the folder becomes `milestone_v<YYYY.MM.DD>_<slug>` (date = today UTC); `--note` seeds the record's Scope.
 2. It prints the lane and record path: `feature/milestone_v<date>_<slug>/draft` pushed with the templated `milestone.md`, the charter left for the Draft to mark Active. An existing folder of that name is reported, never duplicated.
 3. **Then the Draft is authored**: fetch the lane in the working clone, write `milestone.md` with the Principal, open the pull request to `dev` — the Draft is settled in conversation, and its merge makes the milestone Active.
+
+## Kickoff — open a fix
+
+1. `./bin/foundry kickoff --project <key> --fix <slug> --base <main|dev> [--title "<Title>"] [--note "<the fault or the change>"]` — `--base main` for a fix released on its own (a fault in production always is), `--base dev` for one riding the next release; the Principal's call. The folder becomes `fix_v<YYYY.MM.DD>_<slug>` under `docs/fixes/`; `--note` seeds the record's Problem.
+2. It prints the lane and record path: `fix/fix_v<date>_<slug>/change` off the chosen base, pushed with the templated `fix.md`. An existing folder of that name is reported, never duplicated.
+3. **Then the fix is worked** on that lane, and closes per `rules/PROJECT.md §Lifecycle` (Fix) — by the `release` skill when it releases on its own.
 
 ## Failure
 

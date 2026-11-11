@@ -9,9 +9,9 @@ The kit is four things:
 | Piece | What it is | Where |
 |---|---|---|
 | The convention | `PROJECT.md`: how a project is stored, structured, recorded, branched, and moved through its lifecycle. The one document every session works by. | `rules/PROJECT.md` |
-| Foundry | The start acts: `bootstrap` founds a project on GitHub and on disk; `kickoff` opens a milestone; `verify` checks a tree against the shape; `list` shows what this machine founded. | `apps/foundry/` |
-| The skills | `foundry` (how to drive the start acts), `release` (how to close a milestone), `techspec` (how to write technical specs). | `skills/` |
-| The templates | The eleven record templates every project carries: charter, backlog, milestone, decomposition, research, release, integration, review, deployment, workflow, and their index. | `docs/conventions/templates/` |
+| Foundry | The start acts and the publish act: `bootstrap` founds a project on GitHub and on disk; `kickoff` opens a milestone or a fix; `publish` tags a release and creates its GitHub Release; `verify` checks a tree against the shape; `list` shows what this machine founded. | `apps/foundry/` |
+| The skills | `foundry` (how to drive the start acts), `release` (how to close a milestone or a fix), `techspec` (how to write technical specs). | `skills/` |
+| The templates | The thirteen record templates every project carries: charter, backlog, milestone, decomposition, handoff, fix, research, release, integration, review, deployment, workflow, and their index. | `docs/conventions/templates/` |
 
 Two harnesses are supported as deployment surfaces: Claude (Claude Code and Claude Desktop share one install path) and Codex (Codex CLI and Codex Desktop). One installer lands the kit on either.
 
@@ -30,7 +30,7 @@ Everything below is yours to supply, in the order you need it.
 ```sh
 git clone https://github.com/jasonyliu/vork.git
 cd vork
-git checkout v2026.10.18        # the release tag you are installing
+git checkout v2026.11.11        # the release tag you are installing
 provisions/install --surface claude \
   --owner-token ~/.vork/github/owner.token \
   --vork-token  ~/.vork/github/vork.token \
@@ -70,7 +70,7 @@ apps/foundry/bin/foundry list
 
 The dry run authenticates both tokens, checks names and paths, and renders the skeleton to scratch with zero mutation. The act creates the repository with `main` and `dev`, the `defect` label beside GitHub's defaults, the two rulesets, the Vork account's grant, the clone at `<projects-root>/sample/main/` with the charter, the backlog and the templates, and an entry in `apps/foundry/var/projects.json`. A run that fails is re-run: everything that exists is skipped, and the event log under `apps/foundry/var/runs/` says what happened. `ln -s "$PWD/apps/foundry/bin/foundry" ~/.local/bin/foundry` gives the command a stable path.
 
-Then open your harness in the project and write the charter together. The convention loads into every Claude session on its own; a Codex session reads it when it touches the project, as the pointer block says. A milestone opens with `foundry kickoff --project sample --milestone <slug>`, which pushes the templated record on its draft lane; the `foundry` and `release` skills carry the rest.
+Then open your harness in the project and write the charter together. The convention loads into every Claude session on its own; a Codex session reads it when it touches the project, as the pointer block says. A milestone opens with `foundry kickoff --project sample --milestone <slug>`, which pushes the templated record on its draft lane, and a fix with `--fix <slug> --base <main|dev>`; the `foundry` and `release` skills carry the rest, `foundry publish` included.
 
 ## Works
 
@@ -89,7 +89,7 @@ Then open your harness in the project and write the charter together. The conven
 
 Release 1, tag `v2026.10.13`, is the multi-agent conduction framework this kit grew out of: an autonomous development crew built and run from February to August 2026, then retired, published whole as a reading release with its policy corpus, its specs, its four services and a note for an AI agent on what it assumed and what broke. The kit replaced it. The framework stays readable at its tag, and its README is the account of it.
 
-Releases are tagged `v<YYYY.MM.DD>`. This repository follows the convention it ships: `docs/charter.md` is the map, `docs/backlog.md` the standing list, `docs/milestones/` the record of each release.
+Releases are tagged `v<YYYY.MM.DD>`. This repository follows the convention it ships: `docs/charter.md` is the map, `docs/backlog.md` the standing list, `docs/milestones/` and `docs/fixes/` the record of each release.
 
 ## License
 

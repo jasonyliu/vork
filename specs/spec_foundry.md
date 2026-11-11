@@ -1,6 +1,6 @@
 # Foundry
 
-Foundry turns an input bundle into a project container that follows `rules/PROJECT.md` in one invocation, GitHub side and local side, records the founding in the machine's project registry, and opens milestones: `kickoff` creates the milestone record on its draft lane for the Principal and the agent to settle in conversation. Foundry scaffolds structure; conversation fills content. Contracts: `spec_foundry-interface.md`. Artifacts and identifiers: `spec_foundry-data.md`.
+Foundry turns an input bundle into a project container that follows `rules/PROJECT.md` in one invocation, GitHub side and local side, and records the founding in the machine's project registry. `kickoff` opens a milestone: its record on a draft lane, for the Principal and the agent to settle in conversation. `publish` completes a release's publication: the tag on its publishing merge and its GitHub Release, from the release record. Foundry scaffolds structure; conversation fills content. Contracts: `spec_foundry-interface.md`. Artifacts and identifiers: `spec_foundry-data.md`.
 
 Source lives at `apps/foundry/` (TypeScript/Node CLI, Node 22 + tsx, `@octokit/rest` with every request naming GitHub REST API version `2026-03-10`; the token-file model is the single auth surface). It runs from the operator's Vork clone at a release tag (`spec_kit.md §Run surface`).
 
@@ -91,13 +91,55 @@ A failed run re-runs and resumes, whatever stage it died at; resumption is state
 
 ## Kickoff
 
-Opens a milestone, in the project's `main/` clone:
+Opens a milestone or a fix, in the project's `main/` clone. The two kinds differ only in these values, `<date>` being today UTC:
 
-- `git fetch origin`; `docs/milestones/milestone_v<YYYY.MM.DD>_<slug>/` present on `origin/dev` or locally → print its path and exit 0 without creating.
-- Create the lane `feature/milestone_v<YYYY.MM.DD>_<slug>/draft` from `origin/dev`; render `milestone.md` from the canonical template: title, slug, `Status: Active (started <date>)`, Scope seeded with `--note`, every other section left as the template's placeholder; commit under the clone's bound identity (`kickoff: open milestone_v<date>_<slug>`); push the lane with the Vork token.
+| | `--milestone <slug>` | `--fix <slug> --base <main\|dev>` |
+|---|---|---|
+| folder | `docs/milestones/milestone_v<date>_<slug>/` | `docs/fixes/fix_v<date>_<slug>/` |
+| record | `milestone.md` | `fix.md` |
+| lane | `feature/<folder>/draft` from `origin/dev` | `fix/<folder>/change` from `origin/<base>` |
+| filled | title, folder, `Status: Active (started <date>)`, Scope ← `--note` | title, folder, `Status: Active (started <date>)`, Base ← `<base>` with its meaning (`main` — released on its own, `dev` — riding the next release), Problem ← `--note` |
+
+- `git fetch origin`; the folder present on `origin/dev`, on `origin/main`, on the remote lane, or locally → print its path and exit 0 without creating.
+- Create the lane from its start point; render the record from the canonical template (`spec_foundry-data.md §Skeleton inventory`), every section the table leaves out kept as the template's placeholder; commit under the clone's configured identity (`kickoff: open <folder>`); push the lane with the Vork token.
 - Print the lane and the record path, exit 0; git or filesystem failure exits 5 naming the act.
 
-The Draft is then settled in conversation on that lane; its merge to `dev` marks the milestone Active in the charter. Kickoff leaves the registry untouched.
+A milestone's Draft is then settled in conversation on its lane; its merge to `dev` marks the milestone Active in the charter. A fix's work continues on its lane (`rules/PROJECT.md §Lifecycle`, Fix); the charter carries no fix. Kickoff leaves the registry untouched.
+
+## Publish
+
+Closes the publication of one release, in the project's `main/` clone, from the release record already on `origin/main` (`rules/PROJECT.md §Records — Releases`). The Vork token carries every act; the Principal's approval of the publishing merge is the approval this act runs under. Artifact shapes: `spec_foundry-data.md §Release artifacts`.
+
+Resolve, every check before the first mutation:
+
+- Read and authenticate the Vork token (exit 3, named). The repository is `main/`'s origin, `https://github.com/<owner>/<repo>` with or without `.git`; any other origin exits 3 naming it. `main/` absent or not a git clone exits 5.
+- `git fetch origin --tags`.
+- Records: the folders `docs/releases/release_<version>/` on `origin/main` (`git ls-tree`), ordered by version (`spec_foundry-data.md §Identifier system`); none → exit 6.
+- Target: `--version` when given, its folder on `origin/main` or exit 6; else the newest record.
+- Heading: the first line of the target's `release.md` reads `# Release <version>` or `# Release <version> — <title>`, `<version>` equal to the folder's; any other first line exits 6 naming the file.
+- Latest: the target is the newest record → the Release is made Latest; else it is not.
+
+Tag `<version>`:
+
+- Present → it must be reachable from `origin/main` (`git merge-base --is-ancestor`), else exit 6 naming the commit it points at; reported `present`, and an annotated tag's subject becomes the Release's name.
+- Absent → the target must be the newest record, else exit 6: an older release is tagged by hand at its own publishing merge. `origin/main`'s tip must be that record's publishing merge — a commit with two parents whose tree carries `docs/releases/release_<version>/release.md` while its first parent's tree does not — else exit 6 naming the failed condition: a commit landed on `main` after the publishing merge, or the tip is no merge. Create the annotated tag at the tip under `main/`'s configured identity, push `refs/tags/<version>` with the Vork token (exit 5 on a git failure); reported `created`.
+
+Release:
+
+- `GET /repos/{owner}/{repo}/releases/tags/<version>`: found with the same name and body → `present`; found with either different → `drift`, reported, the existing Release left as it stands; not found → create it (`POST /repos/{owner}/{repo}/releases`), `created`. An API failure exits 4.
+
+Output: one line per act — `tag <created|present> <version> <sha>`, `release <created|present|drift> "<name>" latest=<true|false> <html_url>`; with `--dry-run`, `would create` where an act would mutate, and `-` for the URL a Release not yet made lacks. A failure after the tag push leaves the tag standing; the re-run finds it `present` and completes the Release.
+
+### Verification
+
+- A fixture remote with the newest record merged at `main`'s tip and no tag → an annotated tag at the tip carrying the release name, pushed; a Release with that name, the notes and `make_latest: "true"`; a second run reports `present` twice and mutates nothing.
+- The tip a commit after the publishing merge, or no merge → exit 6 naming the condition, no tag, no write.
+- `--version` of an older record whose annotated tag exists and whose Release is absent → the Release is created under the tag's subject, `make_latest: "false"`; `--version` of an older untagged record → exit 6.
+- A tag pointing outside `origin/main`'s history → exit 6 naming its commit.
+- A first line other than the two heading forms, or a heading version unequal to the folder's → exit 6 naming the file.
+- An existing Release whose body differs → `drift`, no write to it.
+- A Release create failing after the tag push → exit 4; the re-run reports the tag `present` and creates the Release.
+- `--dry-run` against the same fixture → zero pushes, zero GitHub writes, the plan printed with `would create`.
 
 ## Verification
 
@@ -109,3 +151,4 @@ The Draft is then settled in conversation on that lane; its merge to `dev` marks
 - `verify --against <vork clone>` exits 0; deleting one canonical template from a copy exits 7 naming the path.
 - `list` after two foundings prints two rows; on a fresh clone prints the empty message.
 - Kickoff → the milestone folder and `milestone.md` on the pushed draft lane; a second call reports the existing folder; a malformed `--milestone` exits 2.
+- Kickoff `--fix` → `fix.md` on the pushed `fix/<folder>/change`, whose first commit's parent is the tip of `origin/<base>`, Base and Problem filled, every other section the template's; a second call reports the existing folder, found on the remote lane alone as well as on `dev` or `main`.
