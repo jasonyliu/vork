@@ -40,7 +40,7 @@ describe('skeleton inventory', () => {
     const inHome = readdirSync(home).filter((name) => name.endsWith('.md')).sort();
     const verbatim = skeletonInventory().filter((entry) => entry.mode === 'verbatim').map((entry) => entry.path.split('/').pop()!);
     expect(verbatim).toEqual(inHome);
-    expect(inHome).toHaveLength(11);
+    expect(inHome).toHaveLength(13);
   });
 });
 
