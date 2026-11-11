@@ -219,7 +219,7 @@ describe('bootstrap pipeline', () => {
     // skeleton rendered into main/, templates from the kit's home
     expect(existsSync(join(mainDir, 'docs', 'charter.md'))).toBe(true);
     expect(existsSync(join(mainDir, 'docs', 'backlog.md'))).toBe(true);
-    expect(readdirSync(join(mainDir, 'docs', 'conventions', 'templates'))).toHaveLength(11);
+    expect(readdirSync(join(mainDir, 'docs', 'conventions', 'templates'))).toHaveLength(13);
     // scaffold message per spec
     expect(h.git.ops.some((op) => op.includes('Foundry: initial project scaffold'))).toBe(true);
   });

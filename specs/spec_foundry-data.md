@@ -1,6 +1,6 @@
 # Foundry Data
 
-The identifier system and artifact inventory for project bootstrap: everything `foundry bootstrap` names and produces, in one place. Mechanisms live in `spec_foundry.md`; invocation contracts in `spec_foundry-interface.md`.
+The identifier system and artifact inventory for Foundry's acts: everything `bootstrap`, `kickoff` and `publish` name and produce, in one place. Mechanisms live in `spec_foundry.md`; invocation contracts in `spec_foundry-interface.md`.
 
 Foundry's durable outputs are GitHub artifacts, a rendered file tree, one entry in the machine's project registry, and an append-only run event trail.
 
@@ -8,7 +8,8 @@ Foundry's durable outputs are GitHub artifacts, a rendered file tree, one entry 
 
 - `project_key`: `[a-z][a-z0-9_]*`; names the repo, the local project folder `<storage-root>/<project_key>/`, and the registry entry. The scaffold commit's owner identity is `<owner_login>` with `<owner_login>@<project_key>.localhost`; the bound identity after it is the Vork account's from the environment.
 - `project_name`: human title, rendered into the charter and the README.
-- Branch names, milestone folder naming: owned by the project convention (`rules/PROJECT.md`); Foundry consumes them as defined.
+- Branch names, milestone, fix and release folder naming: owned by the project convention (`rules/PROJECT.md`); Foundry consumes them as defined.
+- `<version>`: `v<YYYY.MM.DD>` or `v<YYYY.MM.DD>.r<n>` with `n` ≥ 2; names the release folder `docs/releases/release_<version>/`, the tag and the GitHub Release. Versions order by date, then by `n`, a bare date counting as `n` = 1: `v2026.10.16` < `v2026.10.16.r2` < `v2026.10.16.r10` < `v2026.10.17`.
 - Foundry var: `apps/foundry/var/` under the Vork clone, gitignored; `FOUNDRY_VAR` relocates it. Run event log: `<foundry-var>/runs/<project_key>/run_<YYYYMMDDTHHMMSSZ>_<run_id first 8 hex>.jsonl`, unique by construction. Dry-run scratch: `<foundry-var>/dry-run/<project_key>_<YYYYMMDDTHHMMSSZ>/`. Registry: `<foundry-var>/projects.json`.
 - `run_id`: UUID v4 per invocation, stamped on every run event.
 - Template variables: `{{name}}`, closed set below; a template referencing any other name fails the startup lint with `TEMPLATE_UNKNOWN_VARIABLE`.
@@ -36,7 +37,7 @@ Every file rendered under `<storage-root>/<project_key>/main/`; READMEs are on d
 | `docs/backlog.md` | render | `apps/foundry/assets/skeleton/docs/backlog.md`: the backlog template instantiated (Items / Skipped / Done) |
 | `docs/conventions/templates/*.md` | verbatim | the kit's canonical record-template set, `docs/conventions/templates/` at the Vork clone's root, copied byte-verbatim |
 
-The template set has one home, the Vork clone's own `docs/conventions/templates/`; Foundry reads it from there at run time (`<app dir>/../../docs/conventions/templates/`) and `kickoff` takes `milestone.md` from the same place. Adding a canonical template is one file drop; the inventory follows the directory. Other folders (`docs/milestones/`, `docs/releases/`, `docs/research/`, `docs/operations/`, `docs/deployments/`, `specs/`, `apps/`, `provisions/`) materialize at first use. `main/` and the empty `team/` are pipeline products on the machine; the repo carries the skeleton.
+The template set has one home, the Vork clone's own `docs/conventions/templates/`; Foundry reads it from there at run time (`<app dir>/../../docs/conventions/templates/`) and `kickoff` takes `milestone.md` and `fix.md` from the same place. Adding a canonical template is one file drop; the inventory follows the directory. Other folders (`docs/milestones/`, `docs/fixes/`, `docs/releases/`, `docs/research/`, `docs/operations/`, `docs/deployments/`, `specs/`, `apps/`, `provisions/`) materialize at first use. `main/` and the empty `team/` are pipeline products on the machine; the repo carries the skeleton.
 
 ## GitHub artifacts
 
@@ -54,6 +55,15 @@ The template set has one home, the Vork clone's own `docs/conventions/templates/
 Both rulesets gain `required_status_checks` when the project's CI lands; until then pull requests merge on review alone, since a required check before any workflow exists would deadlock every PR. A free plan applies rulesets to public repositories alone (`spec_foundry-interface.md §Environment`, plan matrix).
 
 **Collaborator grant**: the Vork account (`FOUNDRY_VORK_TOKEN_PATH`'s login): repo `push`, invited by the owner and accepted in-run with the Vork token. Two accounts total: the owner's, reserved for the Principal's acts, and the Vork account every session acts through.
+
+## Release artifacts
+
+What `publish` produces for one `<version>` (`spec_foundry.md §Publish`), from its record `docs/releases/release_<version>/release.md`. `<name>` is the record's first line with `# Release ` dropped (`v<version>` or `v<version> — <title>`); `<notes>` is the file below that line, leading blank lines dropped.
+
+| Artifact | Shape |
+|---|---|
+| tag | `v<version>`, annotated, at the publishing merge on `main`; message `<name>`; tagger `main/`'s configured identity |
+| GitHub Release | `tag_name` `v<version>`; `name` `<name>`, or the subject of an annotated tag that already exists; `body` `<notes>`; `draft` false; `prerelease` false; `make_latest` `"true"` for the newest record on `origin/main`, else `"false"` |
 
 ## Registry
 
@@ -99,3 +109,4 @@ Sanitization: a field whose name, split into segments on `_`, `-` and case bound
 - Registry: one entry per founded key after any number of re-runs; `founded_at` stable across re-runs, `updated_at` and `run_id` from the last; the file parses and its keys are sorted.
 - Every secret-pattern field in every run event reads `"***"`.
 - Two runs, same bundle → byte-identical local output modulo `utc_now`, `run_id`, derived node IDs.
+- `<name>` and `<notes>` from a fixture record: a heading with and without its title, blank lines after it dropped, the body otherwise byte-equal; the version order above holds over a shuffled list.

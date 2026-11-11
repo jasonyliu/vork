@@ -37,6 +37,7 @@ Inside `main/`, beside the convention's own records: `rules/PROJECT.md`, `skills
 
 | Key | Description | Status | Date | Release | Path |
 |---|---|---|---|---|---|
+| `milestone_v2026.11.11_handoff-fixes-publish` | Handoff, fixes, and foundry publish — `handoff.md` per milestone and per fix, carrying each session's entry and trail; `docs/fixes/` beside `docs/milestones/` for every fix too small for a milestone; `foundry publish` tagging the publishing merge and creating the GitHub Release from `release.md` | Active | 2026-11-11 → | — | `docs/milestones/milestone_v2026.11.11_handoff-fixes-publish/` |
 | `milestone_v2026.10.14_standalone-kit` | Standalone kit — release 2: Foundry, the convention, the three skills and the templates became Vork's own, untangled from the estate, deployed to Claude and Codex by one installer; the framework tree left `main` and stays at `v2026.10.13` | Completed | 2026-10-14 → 2026-10-16 | `v2026.10.16` | `docs/milestones/milestone_v2026.10.14_standalone-kit/` |
 | `milestone_v2026.10.10_conduction-framework` | Conduction framework — the first release: the retired multi-agent framework published whole, reviewed file by file in eleven batches, renamed to Vork, with the README's three lists and a release note written for an AI agent | Completed | 2026-10-10 → 2026-10-13 | `v2026.10.13` | `docs/milestones/milestone_v2026.10.10_conduction-framework/` |
 
