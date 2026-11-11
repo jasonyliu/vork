@@ -131,12 +131,16 @@ The folder also holds the fix's `handoff.md` (§Records — Handoff).
 
 ### Handoff — `<milestone-folder>/handoff.md`, `<fix-folder>/handoff.md`
 
-The record that carries a milestone's or a fix's work from one session to the next. A session's working context ends with the session, so whatever the next one needs is written here before it ends. Every milestone and every fix carries one, from its first session's wrap-up. It holds two parts:
+The record that carries a milestone's or a fix's work from one session to the next, and the trail of every session the work took: one file per milestone or fix, from its first session's wrap-up, one entry per session, newest on top. An entry stands once written. A session's working context ends with the session, so whatever the next one needs goes into its entry before it ends. Each entry holds:
 
-- **Brief** — rewritten in place at every wrap-up: where the work stands (the lane the next session continues on, its last commit, the open pull requests), what is open (in flight, unresolved, waiting on the Principal), what the next session does first, and what it needs that the records leave out.
-- **Trail** — one row per session, appended at its wrap-up; earlier rows stand: the date, the actor, the machine, the harness's session id, the transcript's path on that machine, and what the session did, as pointers. A transcript stays on the device that produced it; the Trail is how a later session finds the one it needs to look something up in.
+- **Session** — the harness's session id and the transcript's path on the machine that holds it. A transcript stays on the device that produced it; this is how a later session finds the one it needs to look something up in.
+- **Work** — what the session did, as pointers: commits, pull requests, records.
+- **Where** — the lane the work continues on, its last commit, the open pull requests.
+- **Open** — what is in flight or unresolved, and each decision waiting on the Principal. It carries forward everything still open from the entry before, so the newest entry is complete on its own.
+- **Next** — what the next session does first.
+- **Notes** — what the next session needs that the records leave out. A finding that matters beyond the next session moves into the record that owns it: a spec, the backlog, an issue, the decomposition's Trail.
 
-A session wraps up when the Principal calls it, and when its work is done: it rewrites the Brief and appends its Trail row in one commit on the lane the next session continues on — the session's own lane, or, once that lane has merged, the lane opened for the next step — and pushes. The session that releases a milestone wraps up in the close-out on the release lane; the session that completes a fix wraps up on its sync lane. The plan and its step states stay in `decomposition.md`; the handoff records where each session left them.
+A session wraps up when the Principal calls it, and when its work is done. Its entry joins the lane the session is working on; with none open, it goes on the record's own handoff lane — `feature/<milestone-folder>/handoff`, `fix/<fix-folder>/handoff` — off `dev`, brought level with `dev` before each use. Either lane is pushed and lands on `dev` by pull request. The plan and its step states stay in `decomposition.md`; the handoff records where each session left them.
 
 ### Releases — `docs/releases/release_v<YYYY.MM.DD>/`
 
@@ -196,7 +200,7 @@ The issues and the backlog serve different purposes: the backlog carries work in
 
 1. `git status` the clone; a dirty tree gets resolved before it gets added to. `git fetch`, land on `dev`, and pull.
 2. Read the project's `docs/charter.md`, `docs/backlog.md`, and the record of the work — the active milestone's, or the fix's — in that order.
-3. Read the record's newest handoff, once it has one: `git log --all --source -1 --format=%S -- <record-folder>/handoff.md` names the branch that holds it. Its Brief names the lane the work continues on; check that lane out, pull, and read the record again there, since the record's updates ride the lane.
+3. Read the record's newest handoff, once it has one: `git log --all --source -1 --format=%S -- <record-folder>/handoff.md` names the branch that holds it. Its newest entry names the lane the work continues on; check that lane out, pull, and read the record again there, since the record's updates ride the lane.
 4. Work on a lane — the one the Brief names, or a new one for new work, off the branch §Branches gives it — record the work, commit as you go, and open the pull request for the Principal.
 5. Wrap up with the handoff (§Records — Handoff) when the Principal calls it, and when the work is done.
 6. After the pull request merges, the lane stands — lanes are deleted only at a close, in its sweep (§Branches). `dev` and `main` alone persist beyond it.

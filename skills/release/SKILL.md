@@ -14,7 +14,7 @@ Precondition: the Principal's review has called the milestone complete and deplo
 1. **Version** — `v<YYYY.MM.DD>` (today UTC); append `.r2`, `.r3` … when the day already shipped.
 2. **Release lane** — `feature/<milestone-folder>/release` off current `dev`.
 3. **Release record** — `docs/releases/release_v<version>/release.md` from the template: the heading's title naming what shipped, the Record line naming the milestone folder, two lists only, **Features** and **Fixes**.
-4. **Close-out, same lane** — the charter: milestone row Active → Past with a short shipped-summary, Path and Products refreshed to what the project now is; `milestone.md` status → `Completed (<date>)` naming the release; the decomposition's Current rewritten to its final state; `docs/backlog.md`: every item the milestone took in leaves **Items** — shipped → a **Done** row naming the release, dropped along the way → a **Skipped** line with the reason; `handoff.md`: the Brief rewritten to its final state and this session's Trail row appended.
+4. **Close-out, same lane** — the charter: milestone row Active → Past with a short shipped-summary, Path and Products refreshed to what the project now is; `milestone.md` status → `Completed (<date>)` naming the release; the decomposition's Current rewritten to its final state; `docs/backlog.md`: every item the milestone took in leaves **Items** — shipped → a **Done** row naming the release, dropped along the way → a **Skipped** line with the reason; `handoff.md`: this session's entry.
 5. **Release PR** — lane → `dev`; the Principal approves; merge.
 6. **Publishing PR** — `dev → main`; CI green on the merge result; the Principal approves; merge.
 7. **Publish** — §Publish.
@@ -29,7 +29,7 @@ Precondition: the fix's change is complete on `fix/<fix-folder>/<slug>` off `mai
 2. **Release record, same lane** — as §Milestone step 3, the Record line naming the fix folder; `fix.md` status → `Completed (<date>)` naming the release; the charter's Path and Products refreshed where the fix changed them; the backlog item the fix answers → a **Done** row naming the release.
 3. **Publishing PR** — the fix lane → `main`, its body closing the issue the fix answers (`Closes #<n>`); CI green; the Principal approves; merge. This merge is the publishing merge.
 4. **Publish** — §Publish.
-5. **Sync** — `fix/<fix-folder>/sync` off `dev`; merge `main` into it; resolve the conflicts and judge what `dev`'s newer work keeps, adapts or supersedes from the fix; on this lane write `fix.md`'s Sync section and this session's handoff wrap-up; pull request → `dev` on green CI; the Principal approves; merge. `git branch -r --contains v<version>` then lists `origin/main` and `origin/dev`.
+5. **Sync** — `fix/<fix-folder>/sync` off `dev`; merge `main` into it; resolve the conflicts and judge what `dev`'s newer work keeps, adapts or supersedes from the fix; on this lane write `fix.md`'s Sync section and this session's handoff entry; pull request → `dev` on green CI; the Principal approves; merge. `git branch -r --contains v<version>` then lists `origin/main` and `origin/dev`.
 6. **Sweep** — delete the fix's own lanes, `fix/<fix-folder>/*`, on the remote and in the clone.
 7. **Deploy** — §Deploy.
 
