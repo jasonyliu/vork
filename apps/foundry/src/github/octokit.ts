@@ -1,5 +1,5 @@
 import { Octokit } from '@octokit/rest';
-import type { GitHubApi, RepoInfo, LabelInfo, RulesetInfo } from './api.js';
+import type { GitHubApi, RepoInfo, LabelInfo, RulesetInfo, ReleaseApi, ReleaseInfo } from './api.js';
 import type { Visibility } from '../types.js';
 
 // GitHubApi over @octokit/rest. The token-file model is the single auth
@@ -194,6 +194,46 @@ export function buildGitHubApi(options: OctokitApiOptions): GitHubApi {
 
     async createRef(owner, repo, ref, sha) {
       await withRateLimitRetry(() => rest.git.createRef({ owner, repo, ref, sha }));
+    }
+  };
+}
+
+// ReleaseApi over @octokit/rest, under the Vork token (`spec_foundry.md
+// §Publish`): a draft or prerelease is never made, and Latest is named
+// explicitly rather than left to GitHub's own ordering.
+export function buildReleaseApi(token: string): ReleaseApi {
+  const rest = newOctokit(token);
+  const info = (data: { name: string | null; body?: string | null; html_url: string }): ReleaseInfo => ({
+    name: data.name ?? '',
+    body: data.body ?? '',
+    htmlUrl: data.html_url
+  });
+
+  return {
+    async getReleaseByTag(owner, repo, tag): Promise<ReleaseInfo | null> {
+      try {
+        const { data } = await withRateLimitRetry(() => rest.repos.getReleaseByTag({ owner, repo, tag }));
+        return info(data);
+      } catch (error) {
+        if (isNotFound(error)) return null;
+        throw error;
+      }
+    },
+
+    async createRelease(owner, repo, release): Promise<ReleaseInfo> {
+      const { data } = await withRateLimitRetry(() =>
+        rest.repos.createRelease({
+          owner,
+          repo,
+          tag_name: release.tagName,
+          name: release.name,
+          body: release.body,
+          draft: false,
+          prerelease: false,
+          make_latest: release.makeLatest ? 'true' : 'false'
+        })
+      );
+      return info(data);
     }
   };
 }

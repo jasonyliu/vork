@@ -1,5 +1,6 @@
 // Exit-code surface per `spec_foundry-interface.md §CLI`. Code 0 is success;
-// 7 is verify-drift (not a runtime failure — the caller decides).
+// 6 is publish refused and 7 verify-drift (findings, not runtime failures —
+// the caller decides).
 export const EXIT = {
   SUCCESS: 0,
   RUNTIME: 1,
@@ -7,6 +8,7 @@ export const EXIT = {
   PREFLIGHT: 3,
   GITHUB: 4,
   LOCAL: 5,
+  PUBLISH_REFUSED: 6,
   VERIFY_DRIFT: 7
 } as const;
 
@@ -34,6 +36,10 @@ export function preflightError(message: string): FoundryError {
 
 export function githubError(message: string): FoundryError {
   return new FoundryError(EXIT.GITHUB, message);
+}
+
+export function refusedError(message: string): FoundryError {
+  return new FoundryError(EXIT.PUBLISH_REFUSED, message);
 }
 
 export function localError(message: string): FoundryError {
