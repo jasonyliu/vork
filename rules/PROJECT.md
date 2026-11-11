@@ -126,7 +126,7 @@ A fix is one change made outside the milestone loop (§Lifecycle, Fix), released
 
 - **Problem** — the fault or the change wanted, where it surfaced, and the issue or backlog item it answers.
 - **Change** — what changed, with the lane and pull request that carry it.
-- **Verification** — how the change was checked before its publishing merge.
+- **Verification** — how the change was checked before it merged.
 - **Sync** — for a fix released on its own, how `dev` took it: the conflicts the sync merge raised and the keep-or-supersede judgment, written on the sync lane; `none` for a fix riding the next release.
 
 The folder also holds the fix's `handoff.md` (§Records — Handoff).

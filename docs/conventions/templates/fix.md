@@ -1,6 +1,7 @@
 # Fix: {Title} (`fix_v<YYYY.MM.DD>_<slug>`)
 
 **Status:** {`Active (started YYYY-MM-DD)`; `On dev (YYYY-MM-DD)` once a fix riding the next release has merged; `Completed (YYYY-MM-DD)` with a pointer to the release record}
+
 **Base:** {`main` — released on its own | `dev` — riding the next release}
 
 ## Problem
@@ -13,7 +14,7 @@
 
 ## Verification
 
-{how the change was checked before its publishing merge, and by what evidence}
+{how the change was checked before it merged, and by what evidence}
 
 ## Sync
 
