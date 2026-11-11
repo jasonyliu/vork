@@ -5,7 +5,7 @@ description: Close a milestone or a fix with a release — records, close-out, p
 
 # Release — close a milestone or a fix
 
-Project-agnostic: this is the convention's closing procedure (`rules/PROJECT.md §Records — Releases`, `§Branches`). A milestone closes by §Milestone, a fix by §Fix; both end with §Publish and §Deploy.
+Project-agnostic: this is the convention's closing procedure (`rules/PROJECT.md §Records — Releases`, `§Branches`). A milestone closes by §Milestone, a fix released on its own by §Fix; both end with §Publish and §Deploy. A fix riding the next release has no release of its own: its lane merges to `dev`, its `fix.md` status reads `On dev (<date>)`, and the next milestone's close-out completes it (§Milestone step 4).
 
 ## Milestone
 
@@ -14,16 +14,16 @@ Precondition: the Principal's review has called the milestone complete and deplo
 1. **Version** — `v<YYYY.MM.DD>` (today UTC); append `.r2`, `.r3` … when the day already shipped.
 2. **Release lane** — `feature/<milestone-folder>/release` off current `dev`.
 3. **Release record** — `docs/releases/release_v<version>/release.md` from the template: the heading's title naming what shipped, the Record line naming the milestone folder, two lists only, **Features** and **Fixes**.
-4. **Close-out, same lane** — the charter: milestone row Active → Past with a short shipped-summary, Path and Products refreshed to what the project now is; `milestone.md` status → `Completed (<date>)` naming the release; the decomposition's Current rewritten to its final state; `docs/backlog.md`: every item the milestone took in leaves **Items** — shipped → a **Done** row naming the release, dropped along the way → a **Skipped** line with the reason; `handoff.md`: this session's entry.
+4. **Close-out, same lane** — the charter: milestone row Active → Past with a short shipped-summary, Path and Products refreshed to what the project now is; `milestone.md` status → `Completed (<date>)` naming the release; the decomposition's Current rewritten to its final state; every fix record reading `On dev` → `Completed (<date>)` naming the release, its change listed in the release notes; `docs/backlog.md`: every item the milestone or those fixes took in leaves **Items** — shipped → a **Done** row naming the release, dropped along the way → a **Skipped** line with the reason; `handoff.md`: this session's entry.
 5. **Release PR** — lane → `dev`; the Principal approves; merge.
-6. **Publishing PR** — `dev → main`; CI green on the merge result; the Principal approves; merge.
+6. **Publishing PR** — `dev → main`, its body closing every issue the release resolves (`Closes #<n>`); CI green on the merge result; the Principal approves; merge.
 7. **Publish** — §Publish.
 8. **Sweep** — delete every working branch fully merged into `dev`; surface any lane holding unmerged work and leave it standing. Only `dev` and `main` persist beyond a close.
 9. **Deploy** — §Deploy.
 
 ## Fix
 
-Precondition: the fix's change is complete on `fix/<fix-folder>/<slug>` off `main`, its `fix.md` carrying Problem, Change and Verification.
+A fix released on its own. Precondition: the fix's change is complete on `fix/<fix-folder>/<slug>` off `main`, its `fix.md` carrying Problem, Change and Verification.
 
 1. **Version** — as §Milestone step 1.
 2. **Release record, same lane** — as §Milestone step 3, the Record line naming the fix folder; `fix.md` status → `Completed (<date>)` naming the release; the charter's Path and Products refreshed where the fix changed them; the backlog item the fix answers → a **Done** row naming the release.
