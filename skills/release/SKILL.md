@@ -11,9 +11,9 @@ Project-agnostic: this is the convention's closing procedure (`rules/PROJECT.md 
 
 Precondition: the Principal's review has called the milestone complete and deployable, and every lane in its integration set is merged to `dev`.
 
-1. **Version** — `v<YYYY.MM.DD>` (today UTC); append `.r2`, `.r3` … when the day already shipped.
+1. **Version** — `<version>` is `v<YYYY.MM.DD>` (today UTC), with `.r2`, `.r3` … appended when the day already shipped.
 2. **Release lane** — `feature/<milestone-folder>/release` off current `dev`.
-3. **Release record** — `docs/releases/release_v<version>/release.md` from the template: the heading's title naming what shipped, the Record line naming the milestone folder, two lists only, **Features** and **Fixes**.
+3. **Release record** — `docs/releases/release_<version>/release.md` from the template: the heading's title naming what shipped, the Record line naming the milestone folder, two lists only, **Features** and **Fixes**.
 4. **Close-out, same lane** — the charter: milestone row Active → Past with a short shipped-summary, Path and Products refreshed to what the project now is; `milestone.md` status → `Completed (<date>)` naming the release; the decomposition's Current rewritten to its final state; every fix record reading `On dev` → `Completed (<date>)` naming the release, its change listed in the release notes; `docs/backlog.md`: every item the milestone or those fixes took in leaves **Items** — shipped → a **Done** row naming the release, dropped along the way → a **Skipped** line with the reason; `handoff.md`: this session's entry.
 5. **Release PR** — lane → `dev`; the Principal approves; merge.
 6. **Publishing PR** — `dev → main`, its body closing every issue the release resolves (`Closes #<n>`); CI green on the merge result; the Principal approves; merge.
@@ -29,7 +29,7 @@ A fix released on its own. Precondition: the fix's change is complete on `fix/<f
 2. **Release record, same lane** — as §Milestone step 3, the Record line naming the fix folder; `fix.md` status → `Completed (<date>)` naming the release; the charter's Path and Products refreshed where the fix changed them; the backlog item the fix answers → a **Done** row naming the release.
 3. **Publishing PR** — the fix lane → `main`, its body closing the issue the fix answers (`Closes #<n>`); CI green; the Principal approves; merge. This merge is the publishing merge.
 4. **Publish** — §Publish.
-5. **Sync** — `fix/<fix-folder>/sync` off `dev`; merge `main` into it; resolve the conflicts and judge what `dev`'s newer work keeps, adapts or supersedes from the fix; on this lane write `fix.md`'s Sync section and this session's handoff entry; pull request → `dev` on green CI; the Principal approves; merge. `git branch -r --contains v<version>` then lists `origin/main` and `origin/dev`.
+5. **Sync** — `fix/<fix-folder>/sync` off `dev`; merge `main` into it; resolve the conflicts and judge what `dev`'s newer work keeps, adapts or supersedes from the fix; on this lane write `fix.md`'s Sync section and this session's handoff entry; pull request → `dev` on green CI; the Principal approves; merge. `git branch -r --contains <version>` then lists `origin/main` and `origin/dev`.
 6. **Sweep** — delete the fix's own lanes, `fix/<fix-folder>/*`, on the remote and in the clone.
 7. **Deploy** — §Deploy.
 
@@ -38,9 +38,9 @@ A fix released on its own. Precondition: the fix's change is complete on `fix/<f
 The Principal's approval of the publishing PR covers this act, the GitHub Release included.
 
 1. `foundry publish --project <key> --dry-run` from the Vork clone (Vork's `specs/spec_foundry.md §Publish`): prints the version, the commit to tag, the Release's name, and whether it becomes Latest. A refusal (exit 6) names its cause; resolve it and re-run.
-2. The same without `--dry-run`: tags the publishing merge `v<version>`, pushes the tag, and creates the GitHub Release from `release.md`. A re-run converges.
+2. The same without `--dry-run`: tags the publishing merge `<version>`, pushes the tag, and creates the GitHub Release from `release.md`. A re-run converges.
 
-Where Foundry is not installed, the same three acts by hand, `<name>` being `release.md`'s heading with `# Release ` dropped: `git tag -a v<version> <publishing-merge> -m "<name>"`; `git push origin v<version>`; `gh release create v<version> --verify-tag --latest --title "<name>" --notes-file <release.md below its heading>`.
+Where Foundry is not installed, the same three acts by hand, `<name>` being `release.md`'s heading with `# Release ` dropped: `git tag -a <version> <publishing-merge> -m "<name>"`; `git push origin <version>`; `gh release create <version> --verify-tag --latest --title "<name>" --notes-file <release.md below its heading>`.
 
 ## Deploy
 

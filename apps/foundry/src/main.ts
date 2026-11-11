@@ -3,11 +3,12 @@ import { dirname, join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { loadBundle, validateBundle } from './bundle.js';
 import { APP_DIR, expandHome, loadDotenv, loadEnv, readToken } from './config.js';
-import { EXIT, FoundryError, usageError } from './errors.js';
-import { buildGitOps } from './gitops.js';
-import { authIdentity, buildGitHubApi } from './github/octokit.js';
+import { EXIT, FoundryError, localError, preflightError, usageError } from './errors.js';
+import { buildGitOps, buildReleaseGit } from './gitops.js';
+import { authIdentity, buildGitHubApi, buildReleaseApi } from './github/octokit.js';
 import { milestoneFolderName, openMilestoneRecord } from './milestones.js';
 import { runBootstrapPipeline } from './pipeline.js';
+import { formatPublishOutcome, githubCoordinates, parseVersion, runPublish } from './publish.js';
 import { formatRegistry, readRegistry } from './registry.js';
 import { templateSource } from './skeleton.js';
 import type { Bundle } from './types.js';
@@ -31,6 +32,7 @@ interface Flags {
   note?: string;
   milestone?: string;
   title?: string;
+  version?: string;
 }
 
 function parseFlags(args: string[]): Flags {
@@ -54,6 +56,7 @@ function parseFlags(args: string[]): Flags {
       case '--note': flags.note = valued('note'); break;
       case '--milestone': flags.milestone = valued('milestone'); break;
       case '--title': flags.title = valued('title'); break;
+      case '--version': flags.version = valued('version'); break;
       default: throw usageError(`unknown flag: ${arg}`);
     }
   }
@@ -148,6 +151,36 @@ async function commandKickoff(flags: Flags): Promise<number> {
   return EXIT.SUCCESS;
 }
 
+// `foundry publish --project <key> [--version <version>] [--dry-run]`: the tag
+// on a release's publishing merge and its GitHub Release, from the release
+// record on origin/main, under the Vork token (`spec_foundry.md §Publish`).
+async function commandPublish(flags: Flags): Promise<number> {
+  if (flags.project === undefined) throw usageError('publish requires --project <project_key>');
+  if (flags.version !== undefined && parseVersion(flags.version) === null) {
+    throw usageError(`--version must read v<YYYY.MM.DD> or v<YYYY.MM.DD>.r<n> with n ≥ 2 (got "${flags.version}")`);
+  }
+  const env = loadEnv();
+  const vorkToken = readToken(env.vork_token_path);
+  await authIdentity(vorkToken).catch((error: unknown) => {
+    throw new FoundryError(EXIT.PREFLIGHT, `Vork token failed to authenticate (${env.vork_token_path}): ${error instanceof Error ? error.message : String(error)}`);
+  });
+  const mainDir = join(expandHome(flags.storagePath ?? env.project_storage_path), flags.project, 'main');
+  if (!existsSync(join(mainDir, '.git'))) throw localError(`main/ clone missing at ${mainDir}`);
+  const origin = buildGitOps().originUrl(mainDir);
+  const coordinates = origin === null ? null : githubCoordinates(origin);
+  if (coordinates === null) throw preflightError(`the origin of ${mainDir} is no GitHub repository over https: ${origin ?? 'none'}`);
+  const outcome = await runPublish(buildReleaseGit(), buildReleaseApi(vorkToken), {
+    mainDir,
+    owner: coordinates.owner,
+    repo: coordinates.repo,
+    version: flags.version,
+    dryRun: flags.dryRun,
+    token: vorkToken
+  });
+  process.stdout.write(`${formatPublishOutcome(outcome)}\n`);
+  return EXIT.SUCCESS;
+}
+
 // `foundry list`: the machine's project registry (`spec_foundry.md §List`).
 function commandList(): number {
   process.stdout.write(`${formatRegistry(readRegistry(FOUNDRY_VAR))}\n`);
@@ -167,8 +200,10 @@ async function main(): Promise<number> {
       return commandKickoff(flags);
     case 'list':
       return commandList();
+    case 'publish':
+      return commandPublish(flags);
     case undefined:
-      throw usageError('usage: foundry <bootstrap|verify|kickoff|list> [flags]');
+      throw usageError('usage: foundry <bootstrap|verify|kickoff|publish|list> [flags]');
     default:
       throw usageError(`unknown command: ${command}`);
   }

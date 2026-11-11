@@ -58,12 +58,12 @@ Both rulesets gain `required_status_checks` when the project's CI lands; until t
 
 ## Release artifacts
 
-What `publish` produces for one `<version>` (`spec_foundry.md §Publish`), from its record `docs/releases/release_<version>/release.md`. `<name>` is the record's first line with `# Release ` dropped (`v<version>` or `v<version> — <title>`); `<notes>` is the file below that line, leading blank lines dropped.
+What `publish` produces for one `<version>` (`spec_foundry.md §Publish`), from its record `docs/releases/release_<version>/release.md`. `<name>` is the record's first line with `# Release ` dropped (`<version>` or `<version> — <title>`); `<notes>` is the file below that line, leading blank lines dropped.
 
 | Artifact | Shape |
 |---|---|
-| tag | `v<version>`, annotated, at the publishing merge on `main`; message `<name>`; tagger `main/`'s configured identity |
-| GitHub Release | `tag_name` `v<version>`; `name` `<name>`, or the subject of an annotated tag that already exists; `body` `<notes>`; `draft` false; `prerelease` false; `make_latest` `"true"` for the newest record on `origin/main`, else `"false"` |
+| tag | `<version>`, annotated, at the publishing merge on `main`; message `<name>`; tagger `main/`'s configured identity |
+| GitHub Release | `tag_name` `<version>`; `name` `<name>`, or the subject of an annotated tag that already exists; `body` `<notes>`; `draft` false; `prerelease` false; `make_latest` `"true"` for the newest record on `origin/main`, else `"false"` |
 
 ## Registry
 

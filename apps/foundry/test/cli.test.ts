@@ -24,13 +24,24 @@ describe('bin/foundry', () => {
   it('prints usage and exits 2 without a command', () => {
     const r = run([]);
     expect(r.status).toBe(2);
-    expect(r.stderr).toMatch(/usage: foundry <bootstrap\|verify\|kickoff\|list>/);
+    expect(r.stderr).toMatch(/usage: foundry <bootstrap\|verify\|kickoff\|publish\|list>/);
   });
 
   it('--interactive without a terminal exits 2 and points at --bundle', () => {
     const r = run(['bootstrap', '--interactive', '--dry-run'], 'Piped\npiped\nm\nd\ns\n\n\n');
     expect(r.status).toBe(2);
     expect(r.stderr).toMatch(/--interactive needs a terminal; pass --bundle/);
+  });
+
+  it('publish without --project exits 2, and a malformed --version exits 2 naming the flag', () => {
+    const missing = run(['publish', '--dry-run']);
+    expect(missing.status).toBe(2);
+    expect(missing.stderr).toMatch(/publish requires --project/);
+    for (const version of ['v2026.1.5', '2026.01.05', 'v2026.01.05.r1']) {
+      const r = run(['publish', '--project', 'sample', '--version', version]);
+      expect(r.status).toBe(2);
+      expect(r.stderr).toMatch(/--version must read/);
+    }
   });
 
   it('a missing token file exits 3 naming the path, before any API call', () => {
