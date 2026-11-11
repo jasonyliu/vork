@@ -18,7 +18,9 @@ The convention, the templates, the release skill and the `publish` spec are writ
 | 8 | README: Foundry's `publish` | D7 | pending | publish lane |
 | 9 | Fix records for `v2026.10.18`, `v2026.10.23`, `v2026.10.24` | D5 | pending | `feature/milestone_v2026.11.11_handoff-fixes-publish/fix-records` |
 | 10 | Review; release; GitHub Releases for `v2026.10.23` and `v2026.10.24` by `publish --version` | D6 | pending | release lane |
+| 11 | One-off adoption in every existing project: templates copied, standing hotfix mentions retired | D8 | pending | `cutover.md` |
 
 ## Trail
 
 - 2026-11-11 — plan laid down as building began: the convention, templates and release skill written on the draft lane on the Principal's word, ahead of the preview; the `publish` build waits for it.
+- 2026-11-11 — step 11 added on the Principal's word: the template copy into every existing project is this milestone's one-off act; `rules/PROJECT.md` deploys as before.

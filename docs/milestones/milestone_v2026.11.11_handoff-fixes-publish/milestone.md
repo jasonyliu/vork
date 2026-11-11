@@ -10,7 +10,9 @@ Three changes to the convention and its kit, released together:
 - **Fixes** — every release that closes no milestone is a fix: an immediate bug fix, or a change too small to open a milestone. Its record lives in `docs/fixes/fix_v<YYYY.MM.DD>_<slug>/fix.md`; it rides `fix/<fix-folder>/<slug>` off `main` and syncs to `dev` on `fix/<fix-folder>/sync`. The hotfix leaves the convention, folded into the fix.
 - **Publish** — `foundry publish` tags a release's publishing merge and creates its GitHub Release from `release.md`; the release skill calls it, and states the by-hand form where Foundry is absent.
 
-Excluded: automatic wrap-up at a context threshold (dropped by the Principal's ruling, 2026-11-11; `docs/research/research_20261111_handoff-fixes-publish/`). Consumer projects adopt after the release in their own work — each copies the two new templates and the changed release template into its `docs/conventions/templates/` (`foundry verify` names the drift) and retires its own mentions of the hotfix; this milestone changes no consumer.
+After the release, every existing project takes the change once: the new and changed templates copied into its `docs/conventions/templates/`, and the hotfix retired from its standing files (CI branch patterns, deployment manuals) — its records stand as written. `rules/PROJECT.md` reaches every surface by the standing deployment, as at every release.
+
+Excluded: automatic wrap-up at a context threshold (dropped by the Principal's ruling, 2026-11-11; `docs/research/research_20261111_handoff-fixes-publish/`).
 
 ## Deliverables
 
@@ -21,6 +23,7 @@ Excluded: automatic wrap-up at a context threshold (dropped by the Principal's r
 5. Fix records for the three releases that closed no milestone: `v2026.10.18`, `v2026.10.23`, `v2026.10.24`.
 6. GitHub Releases for `v2026.10.23` and `v2026.10.24`, made by `foundry publish --version` on the Principal's word.
 7. README and `spec_kit.md` describing the kit as it ships: thirteen templates, `docs/fixes/`, Foundry's `publish`.
+8. The one-off adoption in every existing project, each act and its pull request recorded in this milestone's `cutover.md`.
 
 ## Verification
 
@@ -29,6 +32,7 @@ Excluded: automatic wrap-up at a context threshold (dropped by the Principal's r
 - Foundry's test suite green, every check in `specs/spec_foundry.md §Publish — Verification` among it.
 - `foundry publish --project vork --dry-run` against this repository prints the plan for the newest release and refuses nothing.
 - At this milestone's release, `foundry publish` makes its tag and its GitHub Release, Latest; `gh release list` shows Releases for `v2026.10.23` and `v2026.10.24`.
+- After the adoption, `foundry verify --against <project>/main` exits 0 for every existing project.
 - The pre-push checks: `gitleaks` clean; the retired-term search clean.
 
 ## Research
