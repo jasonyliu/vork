@@ -1,6 +1,6 @@
 # Foundry
 
-Foundry turns an input bundle into a project container that follows `rules/PROJECT.md` in one invocation, GitHub side and local side, records the founding in the machine's project registry, opens milestones: `kickoff` creates the milestone record on its draft lane for the Principal and the agent to settle in conversation, and publishes releases: `publish` tags a release's publishing merge and creates its GitHub Release from the release record. Foundry scaffolds structure; conversation fills content. Contracts: `spec_foundry-interface.md`. Artifacts and identifiers: `spec_foundry-data.md`.
+Foundry turns an input bundle into a project container that follows `rules/PROJECT.md` in one invocation, GitHub side and local side, and records the founding in the machine's project registry. `kickoff` opens a milestone: its record on a draft lane, for the Principal and the agent to settle in conversation. `publish` completes a release's publication: the tag on its publishing merge and its GitHub Release, from the release record. Foundry scaffolds structure; conversation fills content. Contracts: `spec_foundry-interface.md`. Artifacts and identifiers: `spec_foundry-data.md`.
 
 Source lives at `apps/foundry/` (TypeScript/Node CLI, Node 22 + tsx, `@octokit/rest` with every request naming GitHub REST API version `2026-03-10`; the token-file model is the single auth surface). It runs from the operator's Vork clone at a release tag (`spec_kit.md §Run surface`).
 
