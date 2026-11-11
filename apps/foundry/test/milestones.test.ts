@@ -4,13 +4,14 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { EXIT, FoundryError } from '../src/errors.js';
 import type { GitOps } from '../src/gitops.js';
-import { milestoneFolderName, openMilestoneRecord, renderMilestoneRecord } from '../src/milestones.js';
+import { fixFolderName, milestoneFolderName, openFixRecord, openMilestoneRecord, renderFixRecord, renderMilestoneRecord } from '../src/milestones.js';
 import { templateSource } from '../src/skeleton.js';
 
 // Kickoff: the milestone record opened on a draft lane, from the kit's one
 // template home.
 
 const TEMPLATE = templateSource('milestone.md');
+const FIX_TEMPLATE = templateSource('fix.md');
 const DATE = new Date('2026-08-26T10:00:00Z');
 
 const tempDirs: string[] = [];
@@ -93,6 +94,53 @@ describe('openMilestoneRecord', () => {
       expect.unreachable();
     } catch (error) {
       expect((error as FoundryError).exitCode).toBe(EXIT.LOCAL);
+    }
+  });
+});
+
+describe('fix kickoff', () => {
+  it('names the folder date-first under the fix prefix and rejects a malformed slug with exit 2', () => {
+    expect(fixFolderName(DATE, 'lockfile')).toBe('fix_v2026.08.26_lockfile');
+    try {
+      fixFolderName(DATE, 'Bad_Slug');
+      expect.unreachable();
+    } catch (error) {
+      expect((error as FoundryError).exitCode).toBe(EXIT.USAGE);
+    }
+  });
+
+  it('fills title, folder, status, base and Problem; leaves Change, Verification and Sync as the template has them', () => {
+    const body = renderFixRecord(FIX_TEMPLATE, { title: 'Lockfile', folder: 'fix_v2026.08.26_lockfile', date: DATE, base: 'main', note: 'npm ci refuses the lockfile (#28)' });
+    expect(body).toContain('# Fix: Lockfile (`fix_v2026.08.26_lockfile`)');
+    expect(body).toContain('**Status:** `Active (started 2026-08-26)`');
+    expect(body).toContain('**Base:** `main` — released on its own');
+    expect(body).toContain('## Problem\n\nnpm ci refuses the lockfile (#28)');
+    expect(body).toContain('- {what changed, by path or component');
+    expect(body).toContain('{how `dev` took the fix}');
+    expect(renderFixRecord(FIX_TEMPLATE, { title: 'X', folder: 'fix_v2026.08.26_x', date: DATE, base: 'dev' })).toContain('**Base:** `dev` — riding the next release');
+  });
+
+  it('opens fix/<folder>/change off the chosen base, renders fix.md, commits, pushes', () => {
+    for (const base of ['main', 'dev'] as const) {
+      const mainDir = join(tempDir(), 'main');
+      mkdirSync(join(mainDir, '.git'), { recursive: true });
+      const git = new RecordingGit();
+      const result = openFixRecord(git, { mainDir, folder: 'fix_v2026.08.26_x', title: 'X', date: DATE, base, template: FIX_TEMPLATE, workToken: 't' });
+      expect(result).toEqual({ lane: 'fix/fix_v2026.08.26_x/change', recordPath: 'docs/fixes/fix_v2026.08.26_x/fix.md', existing: false });
+      expect(git.ops).toEqual(['fetch', `checkoutNewBranch(fix/fix_v2026.08.26_x/change, origin/${base})`, 'commitAll(kickoff: open fix_v2026.08.26_x)', 'push(fix/fix_v2026.08.26_x/change)']);
+      expect(existsSync(join(mainDir, result.recordPath))).toBe(true);
+    }
+  });
+
+  it('reports a fix already on main, or on its remote lane alone, and creates nothing', () => {
+    for (const ref of ['origin/main', 'origin/fix/fix_v2026.08.26_x/change']) {
+      const mainDir = join(tempDir(), 'main');
+      mkdirSync(join(mainDir, '.git'), { recursive: true });
+      const git = new RecordingGit();
+      git.onRef.add(`${ref}:docs/fixes/fix_v2026.08.26_x/fix.md`);
+      const result = openFixRecord(git, { mainDir, folder: 'fix_v2026.08.26_x', title: 'X', date: DATE, base: 'dev', template: FIX_TEMPLATE, workToken: 't' });
+      expect(result.existing).toBe(true);
+      expect(git.ops).toEqual(['fetch']);
     }
   });
 });
