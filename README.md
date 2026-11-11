@@ -10,8 +10,8 @@ The kit is four things:
 |---|---|---|
 | The convention | `PROJECT.md`: how a project is stored, structured, recorded, branched, and moved through its lifecycle. The one document every session works by. | `rules/PROJECT.md` |
 | Foundry | The start acts: `bootstrap` founds a project on GitHub and on disk; `kickoff` opens a milestone; `verify` checks a tree against the shape; `list` shows what this machine founded. | `apps/foundry/` |
-| The skills | `foundry` (how to drive the start acts), `release` (how to close a milestone), `techspec` (how to write technical specs). | `skills/` |
-| The templates | The eleven record templates every project carries: charter, backlog, milestone, decomposition, research, release, integration, review, deployment, workflow, and their index. | `docs/conventions/templates/` |
+| The skills | `foundry` (how to drive the start acts), `release` (how to close a milestone or a fix), `techspec` (how to write technical specs). | `skills/` |
+| The templates | The thirteen record templates every project carries: charter, backlog, milestone, decomposition, handoff, fix, research, release, integration, review, deployment, workflow, and their index. | `docs/conventions/templates/` |
 
 Two harnesses are supported as deployment surfaces: Claude (Claude Code and Claude Desktop share one install path) and Codex (Codex CLI and Codex Desktop). One installer lands the kit on either.
 
@@ -89,7 +89,7 @@ Then open your harness in the project and write the charter together. The conven
 
 Release 1, tag `v2026.10.13`, is the multi-agent conduction framework this kit grew out of: an autonomous development crew built and run from February to August 2026, then retired, published whole as a reading release with its policy corpus, its specs, its four services and a note for an AI agent on what it assumed and what broke. The kit replaced it. The framework stays readable at its tag, and its README is the account of it.
 
-Releases are tagged `v<YYYY.MM.DD>`. This repository follows the convention it ships: `docs/charter.md` is the map, `docs/backlog.md` the standing list, `docs/milestones/` the record of each release.
+Releases are tagged `v<YYYY.MM.DD>`. This repository follows the convention it ships: `docs/charter.md` is the map, `docs/backlog.md` the standing list, `docs/milestones/` and `docs/fixes/` the record of each release.
 
 ## License
 

@@ -14,9 +14,9 @@ apps/foundry/                      # the start acts (spec_foundry*.md); var/ and
 provisions/install                 # the installer (§Install)
 provisions/codex/AGENTS.md         # what a surface receives beyond the rule and skills (§Surfaces); a folder per surface that needs one
 docs/charter.md  docs/backlog.md
-docs/conventions/templates/*.md    # the eleven record templates, the one home (spec_foundry-data.md §Skeleton inventory)
+docs/conventions/templates/*.md    # the thirteen record templates, the one home (spec_foundry-data.md §Skeleton inventory)
 docs/deployments/deploy_<surface>/<surface>.md   # one manual per surface: claude, codex
-docs/milestones/  docs/research/  docs/releases/
+docs/milestones/  docs/fixes/  docs/research/  docs/releases/
 specs/spec_kit.md  specs/spec_foundry.md  specs/spec_foundry-interface.md  specs/spec_foundry-data.md
 ```
 
