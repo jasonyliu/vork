@@ -37,7 +37,7 @@ Every file rendered under `<storage-root>/<project_key>/main/`; READMEs are on d
 | `docs/backlog.md` | render | `apps/foundry/assets/skeleton/docs/backlog.md`: the backlog template instantiated (Items / Skipped / Done) |
 | `docs/conventions/templates/*.md` | verbatim | the kit's canonical record-template set, `docs/conventions/templates/` at the Vork clone's root, copied byte-verbatim |
 
-The template set has one home, the Vork clone's own `docs/conventions/templates/`; Foundry reads it from there at run time (`<app dir>/../../docs/conventions/templates/`) and `kickoff` takes `milestone.md` from the same place. Adding a canonical template is one file drop; the inventory follows the directory. Other folders (`docs/milestones/`, `docs/fixes/`, `docs/releases/`, `docs/research/`, `docs/operations/`, `docs/deployments/`, `specs/`, `apps/`, `provisions/`) materialize at first use. `main/` and the empty `team/` are pipeline products on the machine; the repo carries the skeleton.
+The template set has one home, the Vork clone's own `docs/conventions/templates/`; Foundry reads it from there at run time (`<app dir>/../../docs/conventions/templates/`) and `kickoff` takes `milestone.md` and `fix.md` from the same place. Adding a canonical template is one file drop; the inventory follows the directory. Other folders (`docs/milestones/`, `docs/fixes/`, `docs/releases/`, `docs/research/`, `docs/operations/`, `docs/deployments/`, `specs/`, `apps/`, `provisions/`) materialize at first use. `main/` and the empty `team/` are pipeline products on the machine; the repo carries the skeleton.
 
 ## GitHub artifacts
 

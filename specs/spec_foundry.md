@@ -91,13 +91,20 @@ A failed run re-runs and resumes, whatever stage it died at; resumption is state
 
 ## Kickoff
 
-Opens a milestone, in the project's `main/` clone:
+Opens a milestone or a fix, in the project's `main/` clone. The two kinds differ only in these values, `<date>` being today UTC:
 
-- `git fetch origin`; `docs/milestones/milestone_v<YYYY.MM.DD>_<slug>/` present on `origin/dev` or locally → print its path and exit 0 without creating.
-- Create the lane `feature/milestone_v<YYYY.MM.DD>_<slug>/draft` from `origin/dev`; render `milestone.md` from the canonical template: title, slug, `Status: Active (started <date>)`, Scope seeded with `--note`, every other section left as the template's placeholder; commit under the clone's bound identity (`kickoff: open milestone_v<date>_<slug>`); push the lane with the Vork token.
+| | `--milestone <slug>` | `--fix <slug> --base <main\|dev>` |
+|---|---|---|
+| folder | `docs/milestones/milestone_v<date>_<slug>/` | `docs/fixes/fix_v<date>_<slug>/` |
+| record | `milestone.md` | `fix.md` |
+| lane | `feature/<folder>/draft` from `origin/dev` | `fix/<folder>/change` from `origin/<base>` |
+| filled | title, folder, `Status: Active (started <date>)`, Scope ← `--note` | title, folder, `Status: Active (started <date>)`, Base ← `<base>` with its meaning (`main` — released on its own, `dev` — riding the next release), Problem ← `--note` |
+
+- `git fetch origin`; the folder present on `origin/dev`, on `origin/main`, on the remote lane, or locally → print its path and exit 0 without creating.
+- Create the lane from its start point; render the record from the canonical template (`spec_foundry-data.md §Skeleton inventory`), every section the table leaves out kept as the template's placeholder; commit under the clone's configured identity (`kickoff: open <folder>`); push the lane with the Vork token.
 - Print the lane and the record path, exit 0; git or filesystem failure exits 5 naming the act.
 
-The Draft is then settled in conversation on that lane; its merge to `dev` marks the milestone Active in the charter. Kickoff leaves the registry untouched.
+A milestone's Draft is then settled in conversation on its lane; its merge to `dev` marks the milestone Active in the charter. A fix's work continues on its lane (`rules/PROJECT.md §Lifecycle`, Fix); the charter carries no fix. Kickoff leaves the registry untouched.
 
 ## Publish
 
@@ -144,3 +151,4 @@ Output: one line per act — `tag <created|present> v<version> <sha>`, `release 
 - `verify --against <vork clone>` exits 0; deleting one canonical template from a copy exits 7 naming the path.
 - `list` after two foundings prints two rows; on a fresh clone prints the empty message.
 - Kickoff → the milestone folder and `milestone.md` on the pushed draft lane; a second call reports the existing folder; a malformed `--milestone` exits 2.
+- Kickoff `--fix` → `fix.md` on the pushed `fix/<folder>/change`, whose first commit's parent is the tip of `origin/<base>`, Base and Problem filled, every other section the template's; a second call reports the existing folder, found on the remote lane alone as well as on `dev` or `main`.

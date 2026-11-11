@@ -8,7 +8,8 @@ How Foundry is invoked and what it accepts: the CLI surface, the input bundle, a
 foundry bootstrap [--bundle <path>] [--interactive] [--dry-run]
                   [--project-storage-path <path>] [--verbose|--quiet]
 foundry verify --against <project-path> [--bundle <path>]
-foundry kickoff --project <project_key> --milestone <slug> [--title <text>] [--note <text>]
+foundry kickoff --project <project_key> (--milestone <slug> | --fix <slug> --base <main|dev>)
+                [--title <text>] [--note <text>]
 foundry publish --project <project_key> [--version <version>] [--dry-run]
 foundry list
 ```
@@ -16,7 +17,7 @@ foundry list
 - `--bundle` and `--interactive` are mutually exclusive; interactive prompts for the bundle fields on a terminal and writes the bundle file beside the run for replay; with stdin a pipe or a file it exits 2 and points at `--bundle`.
 - `--dry-run`: for `bootstrap`, preflight + render to a scratch path under Foundry's var, GitHub, the storage path and the registry untouched; for `publish`, every resolve check and the plan printed, nothing tagged, pushed or created.
 - `verify --against`: structural check of an existing tree against the canonical skeleton subset; content beyond the skeleton passes free. Without `--bundle` it checks only the bundle-independent subset.
-- `kickoff` opens the milestone record on its draft lane (`spec_foundry.md §Kickoff`). `--milestone` names the slug (`[a-z][a-z0-9-]*`); `--title` the human title (default: the slug); `--note` the settling pointer, seeded into the record's Scope. An existing folder of that name is reported instead of duplicated.
+- `kickoff` opens a milestone record on its draft lane, or a fix record on its lane (`spec_foundry.md §Kickoff`). `--milestone` or `--fix` names the slug (`[a-z][a-z0-9-]*`), exactly one of the two. `--base` names the standing branch a fix comes off — `main` when it releases on its own, `dev` when it rides the next release (`rules/PROJECT.md §Lifecycle`, Fix) — required with `--fix` and refused with `--milestone`, since a fix on the wrong base is the mistake kickoff exists to prevent. `--title` the human title (default: the slug); `--note` the settling pointer, seeded into a milestone's Scope or a fix's Problem. An existing folder of that name is reported instead of duplicated.
 - `publish` tags a release's publishing merge and creates its GitHub Release (`spec_foundry.md §Publish`). `--version` names the release (`spec_foundry-data.md §Identifier system`), default the newest release record on `origin/main`; a malformed value exits 2.
 - `kickoff` and `publish` find the project at `<storage-root>/<project_key>/main/`; `--project-storage-path` overrides the root for them as for `bootstrap`.
 - `list` prints the machine's project registry (`spec_foundry.md §List`).
@@ -92,6 +93,7 @@ Plan matrix, enforced at preflight:
 - Every row of the plan matrix behaves as stated against a mocked `GET /user`.
 - `--dry-run` performs zero GitHub mutations (assert by API-call recording), zero writes under the storage path, and leaves the registry byte-identical.
 - `kickoff` creates the milestone folder + `milestone.md` (template sections intact, title, status and date filled, `--note` in Scope) on the draft lane, pushed; a second call reports the existing folder, leaving it exactly as found; a malformed `--milestone` exits 2 naming it.
+- `kickoff --fix <slug> --base dev` creates `docs/fixes/fix_v<date>_<slug>/fix.md` on `fix/<folder>/change` from `origin/dev`, pushed; `--base main` from `origin/main`. `--fix` without `--base`, `--base` with `--milestone`, a `--base` other than `main` or `dev`, and both or neither of `--milestone` and `--fix` each exit 2 naming the flag.
 - `publish` without `--project` exits 2; `--version v2026.1.5`, `--version 2026.01.05` and `--version v2026.01.05.r1` each exit 2 naming the flag; `--dry-run` performs zero pushes and zero GitHub writes (assert by recording) and prints the plan.
 - `list` renders every registry entry once, in key order.
 - Bootstrap's GitHub artifact set is exactly: repo, the `defect` label, the Vork account's grant, `main` + `dev`, the two rulesets (when `standard`); its local set is exactly the skeleton, `main/`, one empty `team/` directory, and one registry entry.
