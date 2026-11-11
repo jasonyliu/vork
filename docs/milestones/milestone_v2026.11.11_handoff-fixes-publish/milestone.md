@@ -1,6 +1,6 @@
 # Milestone: Handoff, fixes, and foundry publish (`milestone_v2026.11.11_handoff-fixes-publish`)
 
-**Status:** `Active (started 2026-11-11)`
+**Status:** `Completed (2026-11-11)` — released as `v2026.11.11` (`docs/releases/release_v2026.11.11/`)
 
 ## Scope
 
